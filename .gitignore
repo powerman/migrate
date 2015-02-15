@@ -1,0 +1,7 @@
+/App-Migrate-*
+/.build
+/_build*
+/Build
+MYMETA.*
+!META.json
+/.prove

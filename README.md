@@ -1,3 +1,6 @@
+[![Build Status](https://travis-ci.org/powerman/migrate.svg?branch=master)](https://travis-ci.org/powerman/migrate)
+[![Coverage Status](https://coveralls.io/repos/powerman/migrate/badge.png?branch=master)](https://coveralls.io/r/powerman/migrate?branch=master)
+
 # NAME
 
 App::Migrate - upgrade / downgrade project

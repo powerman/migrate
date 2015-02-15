@@ -58,6 +58,17 @@
       }
    },
    "release_status" : "stable",
+   "resources" : {
+      "bugtracker" : {
+         "web" : "https://github.com/powerman/migrate/issues"
+      },
+      "homepage" : "https://github.com/powerman/migrate",
+      "repository" : {
+         "type" : "git",
+         "url" : "https://github.com/powerman/migrate.git",
+         "web" : "https://github.com/powerman/migrate"
+      }
+   },
    "version" : "v0.1.0"
 }
 

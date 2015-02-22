@@ -1,5 +1,4 @@
 package App::migrate;
-
 use 5.010001;
 use warnings;
 use strict;

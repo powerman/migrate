@@ -1,4 +1,4 @@
-package App::Migrate;
+package App::migrate;
 
 use 5.010001;
 use warnings;
@@ -20,6 +20,13 @@ use constant KW             => { %{&KW_UP}, %{&KW_DOWN}, %{&KW_DEFINE}, %{&KW_RE
 use constant DEFINE_TOKENS  => 1;
 use constant DEFINE2_TOKENS => 2;
 use constant DEFINE4_TOKENS => 4;
+
+
+# cleanup temp files
+$SIG{HUP} = $SIG{HUP}     // \&CORE::exit;
+$SIG{INT} = $SIG{INT}     // \&CORE::exit;
+$SIG{QUIT}= $SIG{QUIT}    // \&CORE::exit;
+$SIG{TERM}= $SIG{TERM}    // \&CORE::exit;
 
 
 sub new {
@@ -66,7 +73,7 @@ sub get_steps {
 sub load {
     my ($self, $file) = @_;
 
-    open my $fh, '<', $file or croak "open($file): $!\n";
+    my $fh = path($file)->openr_utf8;
     my @op = _preprocess(_tokenize($fh, { file => $file, line => 0 }));
     close $fh or croak "close($file): $!\n";
 
@@ -421,19 +428,19 @@ __END__
 
 =head1 NAME
 
-App::Migrate - upgrade / downgrade project
+App::migrate - upgrade / downgrade project
 
 
 =head1 VERSION
 
-This document describes App::Migrate version v0.1.0
+This document describes App::migrate version v0.1.0
 
 
 =head1 SYNOPSIS
 
-    use App::Migrate;
+    use App::migrate;
 
-    my $migrate = App::Migrate->new()
+    my $migrate = App::migrate->new()
     $migrate = $migrate->load($file)
     @paths   = $migrate->find_paths($v_to, $v_from)
     say "versions: @{$_}" for @paths;
@@ -470,7 +477,7 @@ TODO
 
 =item new
 
-    my $migrate = App::Migrate->new;
+    my $migrate = App::migrate->new;
 
 TODO
 
@@ -501,23 +508,23 @@ L<https://github.com/powerman/migrate>
 
 =item * MetaCPAN Search
 
-L<https://metacpan.org/search?q=App-Migrate>
+L<https://metacpan.org/search?q=App-migrate>
 
 =item * CPAN Ratings
 
-L<http://cpanratings.perl.org/dist/App-Migrate>
+L<http://cpanratings.perl.org/dist/App-migrate>
 
 =item * AnnoCPAN: Annotated CPAN documentation
 
-L<http://annocpan.org/dist/App-Migrate>
+L<http://annocpan.org/dist/App-migrate>
 
 =item * CPAN Testers Matrix
 
-L<http://matrix.cpantesters.org/?dist=App-Migrate>
+L<http://matrix.cpantesters.org/?dist=App-migrate>
 
 =item * CPANTS: A CPAN Testing Service (Kwalitee)
 
-L<http://cpants.cpanauthors.org/dist/App-Migrate>
+L<http://cpants.cpanauthors.org/dist/App-migrate>
 
 =back
 

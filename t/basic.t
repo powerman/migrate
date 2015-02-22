@@ -1,6 +1,6 @@
 use strict;
 use Test::More 0.96;
-use App::Migrate;
+use App::migrate;
 
 # replace with the actual test
 ok 1;

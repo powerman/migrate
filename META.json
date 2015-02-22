@@ -4,7 +4,7 @@
       "Alex Efros <powerman@cpan.org>"
    ],
    "dynamic_config" : 0,
-   "generated_by" : "Dist::Zilla version 5.031, Dist::Milla version v1.0.14, CPAN::Meta::Converter version 2.143240",
+   "generated_by" : "Dist::Zilla version 5.032, Dist::Milla version v1.0.14, CPAN::Meta::Converter version 2.143240",
    "license" : [
       "mit"
    ],
@@ -12,7 +12,7 @@
       "url" : "http://search.cpan.org/perldoc?CPAN::Meta::Spec",
       "version" : "2"
    },
-   "name" : "App-Migrate",
+   "name" : "App-migrate",
    "no_index" : {
       "directory" : [
          "t",
@@ -52,8 +52,8 @@
       }
    },
    "provides" : {
-      "App::Migrate" : {
-         "file" : "lib/App/Migrate.pm",
+      "App::migrate" : {
+         "file" : "lib/App/migrate.pm",
          "version" : "v0.1.0"
       }
    },

@@ -3,17 +3,17 @@
 
 # NAME
 
-App::Migrate - upgrade / downgrade project
+App::migrate - upgrade / downgrade project
 
 # VERSION
 
-This document describes App::Migrate version v0.1.0
+This document describes App::migrate version v0.1.0
 
 # SYNOPSIS
 
-    use App::Migrate;
+    use App::migrate;
 
-    my $migrate = App::Migrate->new()
+    my $migrate = App::migrate->new()
     $migrate = $migrate->load($file)
     @paths   = $migrate->find_paths($v_to, $v_from)
     say "versions: @{$_}" for @paths;
@@ -46,7 +46,7 @@ TODO
 
 - new
 
-        my $migrate = App::Migrate->new;
+        my $migrate = App::migrate->new;
 
     TODO
 
@@ -72,23 +72,23 @@ Feel free to fork the repository and submit pull requests.
 
 - MetaCPAN Search
 
-    [https://metacpan.org/search?q=App-Migrate](https://metacpan.org/search?q=App-Migrate)
+    [https://metacpan.org/search?q=App-migrate](https://metacpan.org/search?q=App-migrate)
 
 - CPAN Ratings
 
-    [http://cpanratings.perl.org/dist/App-Migrate](http://cpanratings.perl.org/dist/App-Migrate)
+    [http://cpanratings.perl.org/dist/App-migrate](http://cpanratings.perl.org/dist/App-migrate)
 
 - AnnoCPAN: Annotated CPAN documentation
 
-    [http://annocpan.org/dist/App-Migrate](http://annocpan.org/dist/App-Migrate)
+    [http://annocpan.org/dist/App-migrate](http://annocpan.org/dist/App-migrate)
 
 - CPAN Testers Matrix
 
-    [http://matrix.cpantesters.org/?dist=App-Migrate](http://matrix.cpantesters.org/?dist=App-Migrate)
+    [http://matrix.cpantesters.org/?dist=App-migrate](http://matrix.cpantesters.org/?dist=App-migrate)
 
 - CPANTS: A CPAN Testing Service (Kwalitee)
 
-    [http://cpants.cpanauthors.org/dist/App-Migrate](http://cpants.cpanauthors.org/dist/App-Migrate)
+    [http://cpants.cpanauthors.org/dist/App-migrate](http://cpants.cpanauthors.org/dist/App-migrate)
 
 # AUTHOR
 

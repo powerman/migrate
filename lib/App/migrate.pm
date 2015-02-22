@@ -23,10 +23,10 @@ use constant DEFINE4_TOKENS => 4;
 
 
 # cleanup temp files
-$SIG{HUP} = $SIG{HUP}     // \&CORE::exit;
-$SIG{INT} = $SIG{INT}     // \&CORE::exit;
-$SIG{QUIT}= $SIG{QUIT}    // \&CORE::exit;
-$SIG{TERM}= $SIG{TERM}    // \&CORE::exit;
+$SIG{HUP} = $SIG{HUP}     // \&CORE::exit; ## no critic (RequireLocalizedPunctuationVars)
+$SIG{INT} = $SIG{INT}     // \&CORE::exit; ## no critic (RequireLocalizedPunctuationVars)
+$SIG{QUIT}= $SIG{QUIT}    // \&CORE::exit; ## no critic (RequireLocalizedPunctuationVars)
+$SIG{TERM}= $SIG{TERM}    // \&CORE::exit; ## no critic (RequireLocalizedPunctuationVars)
 
 
 sub new {

@@ -1,6 +1,7 @@
+requires 'perl', '5.010001';
 requires 'File::Temp';
 requires 'List::Util';
-requires 'perl', '5.010001';
+requires 'Getopt::Long';
 
 on configure => sub {
     requires 'Devel::AssertOS';

@@ -8,7 +8,7 @@ use Carp;
 our $VERSION = 'v0.1.0';
 
 use List::Util qw( first any );
-use File::Temp qw( tempfile );
+use Path::Tiny qw( path tempfile );
 
 use constant KW_DEFINE      => { map {$_=>1} qw( DEFINE DEFINE2 DEFINE4     ) };
 use constant KW_VERSION     => { map {$_=>1} qw( VERSION                    ) };
@@ -201,11 +201,13 @@ sub _data2arg {
 
     return if $data eq q{};
 
-    my ($fh, $filename) = tempfile('migrate.XXXXXX', TMPDIR=>1, UNLINK=>1);
-    print {$fh} $data;
-    close $fh or croak "close($filename): $!\n";
+    my $file = tempfile('migrate.XXXXXX');
 
-    return $filename;
+    my $fh = $file->opena_utf8;
+    print {$fh} $data;
+    close $fh or croak "close($file): $!\n";
+
+    return $file;
 }
 
 sub _do {
@@ -481,6 +483,9 @@ TODO
 TODO
 
 =back
+
+
+=head1 SYNTAX
 
 
 =head1 SUPPORT

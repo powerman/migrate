@@ -16,7 +16,7 @@ chdir $proj or die "chdir($proj): $!";
 $file->spew_utf8(<<'MIGRATE');
 VERSION 1
 upgrade     touch empty_file
-downgrade   rm empty_file
+downgrade   rm    empty_file
 upgrade     mkdir empty_dir
 downgrade   rmdir empty_dir
 VERSION 2

@@ -443,8 +443,10 @@ This document describes App::migrate version v0.1.0
 
     my $migrate = App::migrate->new()
     $migrate = $migrate->load($file)
+
     @paths   = $migrate->find_paths($v_to, $v_from)
     say "versions: @{$_}" for @paths;
+
     @steps   = $migrate->get_steps($paths[0])
     for (@steps) {
       say "$_->{prev_version} ... $_->{next_version}";
@@ -454,22 +456,70 @@ This document describes App::migrate version v0.1.0
           say "$_->{type} $_->{cmd} @{$_->{args}}";
       }
     }
+
     # - BACKUP: before start any new migration except next one after RESTORE
     # - VERSION: after finished migration
     # - die in BACKUP/RESTORE/VERSION result in calling error
     # - die in error will interrupt migration and RESTORE from backup
     # - $ENV{MIGRATE_PREV_VERSION}
     # - $ENV{MIGRATE_NEXT_VERSION}
-    $migrate = $migrate->on(BACKUP  => sub{my$step=shift;return or die})
-    $migrate = $migrate->on(RESTORE => sub{my$step=shift;return or die})
-    $migrate = $migrate->on(VERSION => sub{my$step=shift;return or die})
-    $migrate = $migrate->on(error   => sub{my$step=shift;return or die})
-    $migrate->run($paths[0])
+    $migrate = $migrate->on(BACKUP  => sub{ my $step=shift; return or die });
+    $migrate = $migrate->on(RESTORE => sub{ my $step=shift; return or die });
+    $migrate = $migrate->on(VERSION => sub{ my $step=shift; return or die });
+    $migrate = $migrate->on(error   => sub{ my $step=shift; return or die });
+    $migrate->run($paths[0]);
 
 
 =head1 DESCRIPTION
 
-TODO
+If you're looking for command-line tool - see L<migrate>. This module is
+actual implementation of that tool's functionality and you'll need it only
+if you're developing similar tool (like L<narada-install>) to implement
+specifics of your project in single perl script instead of using several
+external scripts.
+
+This module implements file format (see L</"SYNTAX">) to describe sequence
+of upgrade and downgrade operations needed to migrate I<something> between
+different versions, and API to analyse and run these operations.
+
+The I<something> mentioned above is usually some project, but it can be
+literally anything - OS configuration in /etc, or overall OS setup
+including installed packages, etc. - anything what has versions and need
+complex operations to upgrade/downgrade between these versions.
+For example, to migrate source code you can use VCS like Git or Mercurial,
+but they didn't support empty directories, file permissions (except
+executable), non-plain file types (fifo, UNIX socket, etc.), xattr, acl,
+configuration files which must differ on each site, and databases. So, if
+you need to migrate anything isn't supported by VCS - you can try this
+module/tool.
+
+Sometimes it isn't possible to really downgrade because some data was lost
+while upgrade - to handle these situations you should provide a ways to
+create complete backup of your project and restore any project's version
+from these backups while downgrade (of course, restoring backups will
+result in losing new changes, so whenever possible it's better to do some
+extra work to provide a way to downgrade without losing any data).
+
+=head2 Example
+
+Here is example how to run migration from version '1.1.8' to '1.2.3' of
+some project which uses even minor versions '1.0.x' and '1.2.x' for stable
+releases and odd minor versions '1.1.x' for unstable releases. The nearest
+common version between '1.1.8' and '1.2.3' is '1.0.42', which was the
+parent for both '1.1.x' and '1.2.x' branches, so we need to downgrade
+project from '1.1.8' to '1.0.42' first, and then upgrade from '1.0.42' to
+'1.2.3'. You'll need two C<*.migrate> files, one which describe migrations
+from '1.0.42' (or earlier version) to '1.1.8', and another with migrations
+from '1.0.42' (or earlier) to '1.2.3'. For brevity let's not make any
+backups while migration.
+
+    my $migrate = App::migrate
+        ->new
+        ->load('1.1.8.migrate')
+        ->load('1.2.3.migrate');
+    $migrate
+        ->on(BACKUP => sub {})
+        ->run( $migrate->find_paths('1.2.3', '1.1.8') );
 
 
 =head1 INTERFACE
@@ -479,8 +529,6 @@ TODO
 =item new
 
     my $migrate = App::migrate->new;
-
-TODO
 
 =back
 

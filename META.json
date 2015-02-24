@@ -40,16 +40,18 @@
       },
       "runtime" : {
          "requires" : {
+            "File::Temp" : "0",
             "Getopt::Long" : "0",
             "List::Util" : "0",
-            "Path::Tiny" : "0",
             "perl" : "5.010001"
          }
       },
       "test" : {
          "requires" : {
+            "Path::Tiny" : "0",
             "Test::Exception" : "0",
-            "Test::More" : "0.96"
+            "Test::More" : "0.96",
+            "Test::Output" : "0"
          }
       }
    },

@@ -59,7 +59,7 @@ including installed packages, etc. - anything what has versions and need
 complex operations to upgrade/downgrade between these versions.
 For example, to migrate source code you can use VCS like Git or Mercurial,
 but they didn't support empty directories, file permissions (except
-executable), non-plain file types (fifo, UNIX socket, etc.), xattr, acl,
+executable), non-plain file types (fifo, UNIX socket, etc.), xattr, ACL,
 configuration files which must differ on each site, and databases. So, if
 you need to migrate anything isn't supported by VCS - you can try this
 module/tool.
@@ -96,9 +96,123 @@ backups while migration.
 
 - new
 
-        my $migrate = App::migrate->new;
+        $migrate = App::migrate->new;
+
+- load
+
+        $migrate->load('path/to/migrate');
+
+    TODO
+
+- find\_paths
+
+        @paths = $migrate->find_paths($to_version, $from_version);
+
+    TODO
+
+- get\_steps
+
+        @steps = $migrate->get_steps( \@versions );
+
+    TODO
+
+- on
+
+        $migrate = $migrate->on(BACKUP  => \&your_handler);
+        $migrate = $migrate->on(RESTORE => \&your_handler);
+        $migrate = $migrate->on(VERSION => \&your_handler);
+        $migrate = $migrate->on(error   => \&your_handler);
+
+    TODO
+
+- run
+
+        $migrate->run( \@versions );
+
+    TODO
 
 # SYNTAX
+
+Syntax of this file was designed to accomplish several goals:
+
+- Be able to automatically make sure each 'upgrade' operation has
+corresponding 'downgrade' operation (so it won't be forget - but, of
+course, it's impossible to automatically check is 'downgrade' operation
+will correctly undo effect of 'upgrade' operation).
+
+    _Thus custom file format is needed._
+
+- Make it easier to manually analyse is 'downgrade' operation looks correct
+for corresponding 'upgrade' operation.
+
+    _Thus related 'upgrade' and 'downgrade' operations must go one right
+    after another._
+
+- Make it obvious some version can't be downgraded and have to be restored
+from backup.
+
+    _Thus RESTORE operation is named in upper case._
+
+- Given all these requirements try to make it simple and obvious to define
+migrate operations, without needs to write downgrade code for typical
+cases.
+
+    _Thus it's possible to define macro to turn combination of
+    upgrade/downgrade operations into one user-defined operation (no worries
+    here: these macro doesn't support recursion, it isn't possible to redefine
+    them, and they have lexical scope - from definition to the end of this
+    file - so they won't really add complexity)._
+
+Example:
+
+    VERSION 0.0.0
+    # To upgrade from 0.0.0 to 0.1.0 we need to create new empty file and
+    # empty directory.
+    upgrade     touch   empty_file
+    downgrade   rm      empty_file
+    upgrade     mkdir   empty_dir
+    downgrade   rmdir   empty_dir
+    VERSION 0.1.0
+    # To upgrade from 0.1.0 to 0.2.0 we need to drop old database. This
+    # change can't be undone, so only way to downgrade from 0.2.0 is to
+    # restore 0.1.0 from backup.
+    upgrade     rm      useless.db
+    RESTORE
+    VERSION 0.2.0
+    # To upgrade from 0.2.0 to 1.0.0 we need to run several commands,
+    # and after downgrading we need to kill some background service.
+    before_upgrade
+        patch    <0.2.0.patch >/dev/null
+        chmod +x some_daemon
+    downgrade
+        patch -R <0.2.0.patch >/dev/null
+    upgrade
+        ./some_daemon &
+    after_downgrade
+        killall -9 some_daemon
+    VERSION 1.0.0
+
+    # Let's define some lazy helpers:
+    DEFINE2 only_upgrade
+    upgrade
+    downgrade /bin/true
+
+    DEFINE2 mkdir
+    upgrade
+        mkdir "$@"
+    downgrade
+        rm -rf "$@"
+
+    # ... and use it:
+    only_upgrade
+        echo "Just upgraded to $MIGRATE_NEXT_VERSION"
+
+    VERSION 1.0.1
+
+    # another lazy macro (must be defined above in same file)
+    mkdir dir1 dir2
+
+    VERSION 1.1.0
 
 # SUPPORT
 

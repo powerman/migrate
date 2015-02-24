@@ -4,11 +4,12 @@ use warnings;
 use strict;
 use utf8;
 use Carp;
+## no critic (RequireCarping)
 
 our $VERSION = 'v0.1.0';
 
 use List::Util qw( first any );
-use Path::Tiny qw( path tempfile );
+use File::Temp qw( tempfile ); # don't use Path::Tiny to have temp files in error $SHELL
 
 use constant KW_DEFINE      => { map {$_=>1} qw( DEFINE DEFINE2 DEFINE4     ) };
 use constant KW_VERSION     => { map {$_=>1} qw( VERSION                    ) };
@@ -72,9 +73,9 @@ sub get_steps {
 sub load {
     my ($self, $file) = @_;
 
-    my $fh = path($file)->openr_utf8;
+    open my $fh, '<:encoding(UTF-8)', $file or die "open($file): $!";
     my @op = _preprocess(_tokenize($fh, { file => $file, line => 0 }));
-    close $fh or croak "close($file): $!\n";
+    close $fh or croak "close($file): $!";
 
     my ($prev_version, $next_version, @steps) = (q{}, q{});
     while (@op) {
@@ -115,14 +116,14 @@ sub load {
             ($prev_version, $next_version, @steps) = ($next_version, q{});
         }
         elsif (KW_UP->{$op->{op}}) {
-            croak _e($op, "need VERSION before $op->{op}") if $prev_version eq q{};
+            die _e($op, "need VERSION before $op->{op}") if $prev_version eq q{};
             my ($cmd1, @args1) = @{ $op->{args} };
             push @steps, {
                 type            => $op->{op},
                 cmd             => $cmd1,
                 args            => \@args1,
             };
-            croak _e($op, "need RESTORE|downgrade|after_downgrade after $op->{op}")
+            die _e($op, "need RESTORE|downgrade|after_downgrade after $op->{op}")
                 if !( @op && (KW_DOWN->{$op[0]{op}} || KW_RESTORE->{$op[0]{op}}) );
             my $op2 = shift @op;
             if (KW_RESTORE->{$op2->{op}}) {
@@ -141,7 +142,7 @@ sub load {
             }
         }
         else {
-            croak _e($op, "need before_upgrade|upgrade before $op->{op}");
+            die _e($op, "need before_upgrade|upgrade before $op->{op}");
         }
     }
 
@@ -184,14 +185,20 @@ sub run {
         1;
     }
     or do {
+        my $err = $@;
         if ($from) {
-            $self->_do({
-                type            => 'BACKUP',    # internal step type
-                version         => $from,
-                prev_version    => $from,
-                next_version    => $path[-1],
-            });
+            eval {
+                $self->_do({
+                    type            => 'RESTORE',   # internal step type
+                    version         => $from,
+                    prev_version    => $from,
+                    next_version    => $path[-1],
+                });
+                warn "successfully undone interrupted migration by RESTORE $from\n";
+                1;
+            } or warn "failed to RESTORE $from: $@";
         }
+        die $err;
     };
     return;
 }
@@ -201,11 +208,9 @@ sub _data2arg {
 
     return if $data eq q{};
 
-    my $file = tempfile('migrate.XXXXXX');
-
-    my $fh = $file->opena_utf8;
+    my ($fh, $file) = tempfile('migrate.XXXXXX', TMPDIR=>1, UNLINK=>1);
     print {$fh} $data;
-    close $fh or croak "close($file): $!\n";
+    close $fh or croak "close($file): $!";
 
     return $file;
 }
@@ -213,7 +218,7 @@ sub _data2arg {
 sub _do {
     my ($self, $step) = @_;
     local $ENV{MIGRATE_PREV_VERSION} = $step->{prev_version};
-    local $ENV{MIGRATE_NEXT_VERSION} = $step->{prev_version};
+    local $ENV{MIGRATE_NEXT_VERSION} = $step->{next_version};
     eval {
         if ($step->{type} eq 'BACKUP' or $step->{type} eq 'RESTORE' or $step->{type} eq 'VERSION') {
             $self->{on}{ $step->{type} }->($step);
@@ -222,14 +227,17 @@ sub _do {
             my $cmd = $step->{cmd};
             if ($cmd =~ /\A#!/ms) {
                 $cmd = _data2arg($cmd);
-                chmod 0700, $cmd or croak "chmod($cmd): $!\n"; ## no critic (ProhibitMagicNumbers)
+                chmod 0700, $cmd or croak "chmod($cmd): $!";    ## no critic (ProhibitMagicNumbers)
             }
-            system($cmd, @{ $step->{args} }) == 0 or croak "$step->{type} failed: $cmd @{ $step->{args} }\n";
+            system($cmd, @{ $step->{args} }) == 0 or die "$step->{type} failed: $cmd @{ $step->{args} }\n";
             print "\n";
         }
         1;
     }
-    or $self->{on}{error}->($step);
+    or do {
+        warn $@;
+        $self->{on}{error}->($step);
+    };
     return;
 }
 
@@ -252,11 +260,15 @@ sub _on_version {
 }
 
 sub _on_error {
-    say 'YOU NEED TO MANUALLY FIX THIS ISSUE RIGHT NOW';
-    say 'When done, use:';
-    say '   exit        to continue migration';
-    say '   exit 1      to interrupt migration and RESTORE from backup';
-    system($ENV{SHELL} // '/bin/sh') == 0 or croak "migration interrupted\n";
+    warn <<'ERROR';
+
+YOU NEED TO MANUALLY FIX THIS ISSUE RIGHT NOW
+When done, use:
+   exit        to continue migration
+   exit 1      to interrupt migration and RESTORE from backup
+
+ERROR
+    system($ENV{SHELL} // '/bin/sh') == 0 or die "migration interrupted\n";
     return;
 }
 
@@ -267,44 +279,44 @@ sub _preprocess { ## no critic (ProhibitExcessComplexity)
     while (@tokens) {
         my $t = shift @tokens;
         if ($t->{op} =~ /\ADEFINE[24]?\z/ms) {
-            croak _e($t, "$t->{op} must have one param", "@{$t->{args}}") if 1 != @{$t->{args}};
-            croak _e($t, "bad name for $t->{op}", $t->{args}[0]) if $t->{args}[0] !~ /\A\S+\z/ms;
-            croak _e($t, "no data allowed for $t->{op}", $t->{data}) if $t->{data} ne q{};
+            die _e($t, "$t->{op} must have one param", "@{$t->{args}}") if 1 != @{$t->{args}};
+            die _e($t, "bad name for $t->{op}", $t->{args}[0]) if $t->{args}[0] !~ /\A\S+\z/ms;
+            die _e($t, "no data allowed for $t->{op}", $t->{data}) if $t->{data} ne q{};
             my $name = $t->{args}[0];
-            croak _e($t, "you can't redefine keyword '$name'") if KW->{$name};
-            croak _e($t, "'$name' is already defined") if $macro{$name};
+            die _e($t, "you can't redefine keyword '$name'") if KW->{$name};
+            die _e($t, "'$name' is already defined") if $macro{$name};
             if ($t->{op} eq 'DEFINE') {
-                croak _e($t, 'need operation after DEFINE') if @tokens < DEFINE_TOKENS;
+                die _e($t, 'need operation after DEFINE') if @tokens < DEFINE_TOKENS;
                 my $t1 = shift @tokens;
-                croak _e($t1, 'first operation after DEFINE must be before_upgrade|upgrade|downgrade|after_downgrade', $t1->{op}) if !( KW_UP->{$t1->{op}} || KW_DOWN->{$t1->{op}} );
+                die _e($t1, 'first operation after DEFINE must be before_upgrade|upgrade|downgrade|after_downgrade', $t1->{op}) if !( KW_UP->{$t1->{op}} || KW_DOWN->{$t1->{op}} );
                 $macro{$name} = [ $t1 ];
             }
             elsif ($t->{op} eq 'DEFINE2') {
-                croak _e($t, 'need two operations after DEFINE2') if @tokens < DEFINE2_TOKENS;
+                die _e($t, 'need two operations after DEFINE2') if @tokens < DEFINE2_TOKENS;
                 my $t1 = shift @tokens;
                 my $t2 = shift @tokens;
-                croak _e($t1,  'first operation after DEFINE2 must be before_upgrade|upgrade',      $t1->{op}) if !KW_UP->{$t1->{op}};
-                croak _e($t2, 'second operation after DEFINE2 must be downgrade|after_downgrade',   $t2->{op}) if !KW_DOWN->{$t2->{op}};
+                die _e($t1,  'first operation after DEFINE2 must be before_upgrade|upgrade',      $t1->{op}) if !KW_UP->{$t1->{op}};
+                die _e($t2, 'second operation after DEFINE2 must be downgrade|after_downgrade',   $t2->{op}) if !KW_DOWN->{$t2->{op}};
                 $macro{$name} = [ $t1, $t2 ];
             }
             elsif ($t->{op} eq 'DEFINE4') {
-                croak _e($t, 'need four operations after DEFINE4') if @tokens < DEFINE4_TOKENS;
+                die _e($t, 'need four operations after DEFINE4') if @tokens < DEFINE4_TOKENS;
                 my $t1 = shift @tokens;
                 my $t2 = shift @tokens;
                 my $t3 = shift @tokens;
                 my $t4 = shift @tokens;
-                croak _e($t1,  'first operation after DEFINE4 must be before_upgrade',  $t1->{op}) if $t1->{op} ne 'before_upgrade';
-                croak _e($t2, 'second operation after DEFINE4 must be upgrade',         $t2->{op}) if $t2->{op} ne 'upgrade';
-                croak _e($t3,  'third operation after DEFINE4 must be downgrade',       $t3->{op}) if $t3->{op} ne 'downgrade';
-                croak _e($t4, 'fourth operation after DEFINE4 must be after_downgrade', $t4->{op}) if $t4->{op} ne 'after_downgrade';
+                die _e($t1,  'first operation after DEFINE4 must be before_upgrade',  $t1->{op}) if $t1->{op} ne 'before_upgrade';
+                die _e($t2, 'second operation after DEFINE4 must be upgrade',         $t2->{op}) if $t2->{op} ne 'upgrade';
+                die _e($t3,  'third operation after DEFINE4 must be downgrade',       $t3->{op}) if $t3->{op} ne 'downgrade';
+                die _e($t4, 'fourth operation after DEFINE4 must be after_downgrade', $t4->{op}) if $t4->{op} ne 'after_downgrade';
                 $macro{$name} = [ $t1, $t2, $t3, $t4 ];
             }
         }
         elsif (KW_VERSION->{$t->{op}}) {
-            croak _e($t, 'VERSION must have one param', "@{$t->{args}}") if 1 != @{$t->{args}};
-            croak _e($t, 'bad value for VERSION', $t->{args}[0])
+            die _e($t, 'VERSION must have one param', "@{$t->{args}}") if 1 != @{$t->{args}};
+            die _e($t, 'bad value for VERSION', $t->{args}[0])
                 if $t->{args}[0] !~ /\A\S+\z/ms || $t->{args}[0] =~ /[\x00-\x1F\x7F \/?*`"’\\]/ms;
-            croak _e($t, 'no data allowed for VERSION', $t->{data}) if $t->{data} ne q{};
+            die _e($t, 'no data allowed for VERSION', $t->{data}) if $t->{data} ne q{};
             push @op, {
                 loc     => $t->{loc},
                 op      => $t->{op},
@@ -312,8 +324,8 @@ sub _preprocess { ## no critic (ProhibitExcessComplexity)
             };
         }
         elsif (KW_RESTORE->{$t->{op}}) {
-            croak _e($t, 'RESTORE must have no params', "@{$t->{args}}") if 0 != @{$t->{args}};
-            croak _e($t, 'no data allowed for RESTORE', $t->{data}) if $t->{data} ne q{};
+            die _e($t, 'RESTORE must have no params', "@{$t->{args}}") if 0 != @{$t->{args}};
+            die _e($t, 'no data allowed for RESTORE', $t->{data}) if $t->{data} ne q{};
             push @op, {
                 loc     => $t->{loc},
                 op      => $t->{op},
@@ -321,7 +333,7 @@ sub _preprocess { ## no critic (ProhibitExcessComplexity)
             };
         }
         elsif (KW_UP->{$t->{op}} || KW_DOWN->{$t->{op}}) {
-            croak _e($t, "$t->{op} require command or data") if !@{$t->{args}} && $t->{data} !~ /\S/ms;
+            die _e($t, "$t->{op} require command or data") if !@{$t->{args}} && $t->{data} !~ /\S/ms;
             push @op, {
                 loc     => $t->{loc},
                 op      => $t->{op},
@@ -344,7 +356,7 @@ sub _preprocess { ## no critic (ProhibitExcessComplexity)
                   : $t->{data} =~ /\S/ms    ? _shebang($t->{data})
                   :                           ()
                   ;
-                croak _e($t, "$t->{op} require command or data") if !@args;
+                die _e($t, "$t->{op} require command or data") if !@args;
                 push @op, {
                     loc     => $t->{loc},
                     op      => $_->{op},
@@ -390,7 +402,7 @@ sub _tokenize {
                 }
                 push @args, $param;
             }
-            croak _e($loc, 'bad operation param', $1) if $args =~ /\G(.+)\z/msgc; ## no critic (ProhibitCaptureWithoutTest)
+            die _e($loc, 'bad operation param', $1) if $args =~ /\G(.+)\z/msgc; ## no critic (ProhibitCaptureWithoutTest)
             push @tokens, {
                 loc => $loc,
                 op  => $op,
@@ -403,14 +415,14 @@ sub _tokenize {
                 $tokens[-1]{data} .= $_;
             }
             elsif (/\S/ms) {
-                croak _e($loc, 'data before operation', $_);
+                die _e($loc, 'data before operation', $_);
             }
             else {
                 # skip /^\s*$/ before first token
             }
         }
         else {
-            croak _e($loc, 'bad token', $_);
+            die _e($loc, 'bad token', $_);
         }
     }
     # post-process data
@@ -488,7 +500,7 @@ including installed packages, etc. - anything what has versions and need
 complex operations to upgrade/downgrade between these versions.
 For example, to migrate source code you can use VCS like Git or Mercurial,
 but they didn't support empty directories, file permissions (except
-executable), non-plain file types (fifo, UNIX socket, etc.), xattr, acl,
+executable), non-plain file types (fifo, UNIX socket, etc.), xattr, ACL,
 configuration files which must differ on each site, and databases. So, if
 you need to migrate anything isn't supported by VCS - you can try this
 module/tool.
@@ -528,12 +540,138 @@ backups while migration.
 
 =item new
 
-    my $migrate = App::migrate->new;
+    $migrate = App::migrate->new;
+
+=item load
+
+    $migrate->load('path/to/migrate');
+
+TODO
+
+=item find_paths
+
+    @paths = $migrate->find_paths($to_version, $from_version);
+
+TODO
+
+=item get_steps
+
+    @steps = $migrate->get_steps( \@versions );
+
+TODO
+
+=item on
+
+    $migrate = $migrate->on(BACKUP  => \&your_handler);
+    $migrate = $migrate->on(RESTORE => \&your_handler);
+    $migrate = $migrate->on(VERSION => \&your_handler);
+    $migrate = $migrate->on(error   => \&your_handler);
+
+TODO
+
+=item run
+
+    $migrate->run( \@versions );
+
+TODO
 
 =back
 
 
 =head1 SYNTAX
+
+Syntax of this file was designed to accomplish several goals:
+
+=over
+
+=item *
+
+Be able to automatically make sure each 'upgrade' operation has
+corresponding 'downgrade' operation (so it won't be forget - but, of
+course, it's impossible to automatically check is 'downgrade' operation
+will correctly undo effect of 'upgrade' operation).
+
+I<Thus custom file format is needed.>
+
+=item *
+
+Make it easier to manually analyse is 'downgrade' operation looks correct
+for corresponding 'upgrade' operation.
+
+I<Thus related 'upgrade' and 'downgrade' operations must go one right
+after another.>
+
+=item *
+
+Make it obvious some version can't be downgraded and have to be restored
+from backup.
+
+I<Thus RESTORE operation is named in upper case.>
+
+=item *
+
+Given all these requirements try to make it simple and obvious to define
+migrate operations, without needs to write downgrade code for typical
+cases.
+
+I<Thus it's possible to define macro to turn combination of
+upgrade/downgrade operations into one user-defined operation (no worries
+here: these macro doesn't support recursion, it isn't possible to redefine
+them, and they have lexical scope - from definition to the end of this
+file - so they won't really add complexity).>
+
+=back
+
+Example:
+
+    VERSION 0.0.0
+    # To upgrade from 0.0.0 to 0.1.0 we need to create new empty file and
+    # empty directory.
+    upgrade     touch   empty_file
+    downgrade   rm      empty_file
+    upgrade     mkdir   empty_dir
+    downgrade   rmdir   empty_dir
+    VERSION 0.1.0
+    # To upgrade from 0.1.0 to 0.2.0 we need to drop old database. This
+    # change can't be undone, so only way to downgrade from 0.2.0 is to
+    # restore 0.1.0 from backup.
+    upgrade     rm      useless.db
+    RESTORE
+    VERSION 0.2.0
+    # To upgrade from 0.2.0 to 1.0.0 we need to run several commands,
+    # and after downgrading we need to kill some background service.
+    before_upgrade
+        patch    <0.2.0.patch >/dev/null
+        chmod +x some_daemon
+    downgrade
+        patch -R <0.2.0.patch >/dev/null
+    upgrade
+        ./some_daemon &
+    after_downgrade
+        killall -9 some_daemon
+    VERSION 1.0.0
+
+    # Let's define some lazy helpers:
+    DEFINE2 only_upgrade
+    upgrade
+    downgrade /bin/true
+
+    DEFINE2 mkdir
+    upgrade
+        mkdir "$@"
+    downgrade
+        rm -rf "$@"
+
+    # ... and use it:
+    only_upgrade
+        echo "Just upgraded to $MIGRATE_NEXT_VERSION"
+
+    VERSION 1.0.1
+
+    # another lazy macro (must be defined above in same file)
+    mkdir dir1 dir2
+
+    VERSION 1.1.0
 
 
 =head1 SUPPORT

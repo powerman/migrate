@@ -71,7 +71,7 @@ sub get_steps {
 sub load {
     my ($self, $file) = @_;
 
-    open my $fh, '<:encoding(UTF-8)', $file or die "open($file): $!";
+    open my $fh, '<:encoding(UTF-8)', $file or croak "open($file): $!";
     my @op = _preprocess(_tokenize($fh, { file => $file, line => 0 }));
     close $fh or croak "close($file): $!";
 
@@ -289,7 +289,7 @@ sub _preprocess { ## no critic (ProhibitExcessComplexity)
             die _e($t, "bad name for $t->{op}", $t->{args}[0]) if $t->{args}[0] !~ /\A(?!#)\S+\z/ms;
             die _e($t, "no data allowed for $t->{op}", $t->{data}) if $t->{data} ne q{};
             my $name = $t->{args}[0];
-            die _e($t, "you can't redefine keyword '$name'") if KW->{$name};
+            die _e($t, "can't redefine keyword '$name'") if KW->{$name};
             die _e($t, "'$name' is already defined") if $macro{$name};
             if ($t->{op} eq 'DEFINE') {
                 die _e($t, 'need operation after DEFINE') if @tokens < DEFINE_TOKENS;
@@ -321,7 +321,7 @@ sub _preprocess { ## no critic (ProhibitExcessComplexity)
         elsif (KW_VERSION->{$t->{op}}) {
             die _e($t, 'VERSION must have one param', "@{$t->{args}}") if 1 != @{$t->{args}};
             die _e($t, 'bad value for VERSION', $t->{args}[0])
-                if $t->{args}[0] !~ /\A\S+\z/ms || $t->{args}[0] =~ /[\x00-\x1F\x7F \/?*`"’\\]/ms;
+                if $t->{args}[0] !~ /\A\S+\z/ms || $t->{args}[0] =~ /[\x00-\x1F\x7F \/?*`"'\\]/ms;
             die _e($t, 'no data allowed for VERSION', $t->{data}) if $t->{data} ne q{};
             push @op, {
                 loc     => $t->{loc},
@@ -371,7 +371,7 @@ sub _preprocess { ## no critic (ProhibitExcessComplexity)
             }
         }
         else {
-            croak "Internal error: bad op $t->{op}";
+            die _e($t, "unknown operation '$t->{op}'");
         }
     }
     return @op;
@@ -408,7 +408,7 @@ sub _tokenize {
                 }
                 push @args, $param;
             }
-            die _e($loc, 'bad operation param', $1) if $args =~ /\G(.+)\z/msgc; ## no critic (ProhibitCaptureWithoutTest)
+            die _e({loc=>$loc}, 'bad operation param', $1) if $args =~ /\G(.+)\z/msgc; ## no critic (ProhibitCaptureWithoutTest)
             push @tokens, {
                 loc => $loc,
                 op  => $op,
@@ -421,14 +421,14 @@ sub _tokenize {
                 $tokens[-1]{data} .= $_;
             }
             elsif (/\S/ms) {
-                die _e($loc, 'data before operation', $_);
+                die _e({loc=>$loc}, 'data before operation', $_);
             }
             else {
                 # skip /^\s*$/ before first token
             }
         }
         else {
-            die _e($loc, 'bad token', $_);
+            die _e({loc=>$loc}, 'bad token', $_);
         }
     }
     # post-process data

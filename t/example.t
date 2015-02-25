@@ -1,7 +1,7 @@
 use strict;
 use Test::More;
 use Test::Exception;
-use Test::Output;
+use Test::Output qw( :all );
 use Path::Tiny qw( path tempdir tempfile );
 use App::migrate;
 
@@ -76,12 +76,12 @@ lives_ok { $migrate->load($file) } 'load';
 
 subtest '0.0.0 <-> 0.1.0', sub {
     ok !$proj->children,                    'proj is empty';
-    lives_ok { $migrate->run( $migrate->find_paths('0.1.0', '0.0.0') ) } '0.0.0->0.1.0';
+    run('0.0.0' => '0.1.0');
     is $proj->children, 2,                  'proj is not empty:';
     ok $proj->child('empty_file')->is_file, '... has empty_file';
     ok $proj->child('empty_dir')->is_dir,   '... has empty_dir/';
 
-    lives_ok { $migrate->run( $migrate->find_paths('0.0.0', '0.1.0') ) } '0.1.0->0.0.0';
+    run('0.1.0' => '0.0.0');
     ok !$proj->children,                    'proj is empty';
 
     done_testing;
@@ -90,10 +90,10 @@ subtest '0.0.0 <-> 0.1.0', sub {
 subtest '0.1.0 <-> 0.2.0', sub {
     path('useless.db')->touch;
     ok -e 'useless.db', 'created useless.db';
-    lives_ok { $migrate->run( $migrate->find_paths('0.2.0', '0.1.0') ) } '0.1.0->0.2.0';
+    run('0.1.0' => '0.2.0');
     ok !-e 'useless.db', 'useless.db was removed';
 
-    lives_ok { $migrate->run( $migrate->find_paths('0.1.0', '0.2.0') ) } '0.2.0->0.1.0';
+    run('0.2.0' => '0.1.0');
     is_deeply \@restore, [qw(0.1.0)], '... RESTORE 0.1.0';
 
     done_testing;
@@ -109,11 +109,11 @@ diff -uNr some_daemon some_daemon
 +kill -STOP $$
 PATCH
 
-    lives_ok { $migrate->run( $migrate->find_paths('1.0.0', '0.2.0') ) } '0.2.0->1.0.0';
+    run('0.2.0' => '1.0.0');
     ok -e 'some_daemon', '... ./some_daemon exists';
     is system('ps | grep -q some_daemon'), 0, '... some_daemon is running';
 
-    lives_ok { $migrate->run( $migrate->find_paths('0.2.0', '1.0.0') ) } '1.0.0->0.2.0';
+    run('1.0.0' => '0.2.0');
     isnt system('ps | grep -q some_daemon'), 0, '... some_daemon is not running';
     ok !-e 'some_daemon', '... ./some_daemon does not exists';
 
@@ -122,28 +122,31 @@ PATCH
 };
 
 subtest '1.0.0 -> 1.0.1', sub {
-    lives_ok {
-        stdout_is(sub {
-            $migrate->run( $migrate->find_paths('1.0.1', '1.0.0') )
-        }, "Just upgraded to 1.0.1\n"."\n", 'echo was run');
-    } '1.0.0->1.0.1';
-    lives_ok {
-        stdout_is(sub {
-            $migrate->run( $migrate->find_paths('1.0.0', '1.0.1') )
-        }, ""."\n", 'nothing was run');
-    } '1.0.1->1.0.0';
-
+    run('1.0.0' => '1.0.1', "Just upgraded to 1.0.1\n"."\n", undef, 'echo was run');
+    run('1.0.1' => '1.0.0',                            "\n", undef, 'nothing was run');
     done_testing;
 };
 
 subtest '1.0.1 -> 1.1.0', sub {
     ok !$proj->children, 'proj is empty';
-    lives_ok { $migrate->run( $migrate->find_paths('1.1.0', '1.0.1') ) } '1.0.1->1.1.0';
+    run('1.0.1' => '1.1.0');
     ok -d 'dir1', '... dir1/ exists';
     ok -d 'dir2', '... dir2/ exists';
-    lives_ok { $migrate->run( $migrate->find_paths('1.0.1', '1.1.0') ) } '1.1.0->1.0.1';
+    run('1.1.0' => '1.0.1');
     ok !$proj->children, 'proj is empty';
 };
 
 
 done_testing;
+
+
+sub run {
+    my ($from, $to, $wantout, $wanterr, $msg) = @_;
+    lives_ok {
+        my ($stdout, $stderr) = output_from sub {
+            $migrate->run( $migrate->find_paths($from => $to) )
+        };
+        is $stdout, $wantout, ($msg ? "(stdout) $msg" : ()) if defined $wantout;
+        is $stderr, $wanterr, ($msg ? "(stderr) $msg" : ()) if defined $wanterr;
+    } "$from -> $to";
+}

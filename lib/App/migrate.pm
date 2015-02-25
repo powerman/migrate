@@ -44,11 +44,8 @@ sub new {
 }
 
 sub find_paths {
-    my ($self, $to, @from) = @_;
-    my $p = $self->{paths}{ $from[-1] } || {};
-    return [@from, $to] if $p->{$to};
-    my %seen = map {$_=>1} @from;
-    return map {$self->find_paths($to,@from,$_)} grep {!$seen{$_}} keys %{$p};
+    my ($self, $from, $to) = @_;
+    return $self->_find_paths($to, $from);
 }
 
 sub get_steps {
@@ -245,6 +242,14 @@ sub _e {
     my ($loc, $msg, $near) = @_;
     return "parse error: $msg at $loc->{file}:$loc->{line}"
       . ($near eq q{} ? "\n" : " near '$near'\n");
+}
+
+sub _find_paths {
+    my ($self, $to, @from) = @_;
+    my $p = $self->{paths}{ $from[-1] } || {};
+    return [@from, $to] if $p->{$to};
+    my %seen = map {$_=>1} @from;
+    return map {$self->_find_paths($to,@from,$_)} grep {!$seen{$_}} keys %{$p};
 }
 
 sub _on_backup {
@@ -456,7 +461,7 @@ This document describes App::migrate version v0.1.0
     my $migrate = App::migrate->new()
     $migrate = $migrate->load($file)
 
-    @paths   = $migrate->find_paths($v_to, $v_from)
+    @paths   = $migrate->find_paths($v_from => $v_to)
     say "versions: @{$_}" for @paths;
 
     @steps   = $migrate->get_steps($paths[0])
@@ -531,7 +536,7 @@ backups while migration.
         ->load('1.2.3.migrate');
     $migrate
         ->on(BACKUP => sub {})
-        ->run( $migrate->find_paths('1.2.3', '1.1.8') );
+        ->run( $migrate->find_paths('1.1.8' => '1.2.3') );
 
 
 =head1 INTERFACE
@@ -550,7 +555,7 @@ TODO
 
 =item find_paths
 
-    @paths = $migrate->find_paths($to_version, $from_version);
+    @paths = $migrate->find_paths($from_version => $to_version);
 
 TODO
 

@@ -18,7 +18,7 @@ my (@backup, @restore);
 $migrate->on(BACKUP  => sub { push @backup,  shift->{version} });
 $migrate->on(RESTORE => sub { push @restore, shift->{version} });
 
-ok $migrate,                            'new';
+ok $migrate, 'new';
 
 # Make sure example from documentation actually works
 $file->spew_utf8(<<'MIGRATE');
@@ -39,14 +39,14 @@ VERSION 0.2.0
 # To upgrade from 0.2.0 to 1.0.0 we need to run several commands,
 # and after downgrading we need to kill some background service.
 before_upgrade
-    patch    <0.2.0.patch >/dev/null
-    chmod +x some_daemon
+  patch    <0.2.0.patch >/dev/null
+  chmod +x some_daemon
 downgrade
-    patch -R <0.2.0.patch >/dev/null
+  patch -R <0.2.0.patch >/dev/null
 upgrade
-    ./some_daemon &
+  ./some_daemon &
 after_downgrade
-    killall -9 some_daemon
+  killall -9 some_daemon
 VERSION 1.0.0
 
 # Let's define some lazy helpers:
@@ -56,13 +56,13 @@ downgrade /bin/true
 
 DEFINE2 mkdir
 upgrade
-    mkdir "$@"
+  mkdir "$@"
 downgrade
-    rm -rf "$@"
+  rm -rf "$@"
 
 # ... and use it:
 only_upgrade
-    echo "Just upgraded to $MIGRATE_NEXT_VERSION"
+  echo "Just upgraded to $MIGRATE_NEXT_VERSION"
 
 VERSION 1.0.1
 
@@ -72,7 +72,7 @@ mkdir dir1 dir2
 VERSION 1.1.0
 MIGRATE
 
-lives_ok { $migrate->load($file) }      'load';
+lives_ok { $migrate->load($file) } 'load';
 
 subtest '0.0.0 <-> 0.1.0', sub {
     ok !$proj->children,                    'proj is empty';

@@ -50,7 +50,8 @@ sub find_paths {
 
 sub get_steps {
     my ($self, $path) = @_;
-    my @path = @{ $path };
+    my @path = @{ $path // [] };
+    croak 'path must contain at least 2 versions' if 2 > @path;
     my @all_steps;
     for (; 2 <= @path; shift @path) {
         my ($prev, $next) = @path;
@@ -155,8 +156,8 @@ sub on {
 
 sub run {
     my ($self, $path) = @_;
+    $self->get_steps($path);  # validate full @path before starting
     my @path = @{ $path };
-    croak "no steps for path: @path" if !$self->get_steps($path);  # validate full @path before starting
     my $from;
     eval {
         my $just_restored = 0;
@@ -474,12 +475,6 @@ This document describes App::migrate version v0.1.0
       }
     }
 
-    # - BACKUP: before start any new migration except next one after RESTORE
-    # - VERSION: after finished migration
-    # - die in BACKUP/RESTORE/VERSION result in calling error
-    # - die in error will interrupt migration and RESTORE from backup
-    # - $ENV{MIGRATE_PREV_VERSION}
-    # - $ENV{MIGRATE_NEXT_VERSION}
     $migrate = $migrate->on(BACKUP  => sub{ my $step=shift; return or die });
     $migrate = $migrate->on(RESTORE => sub{ my $step=shift; return or die });
     $migrate = $migrate->on(VERSION => sub{ my $step=shift; return or die });
@@ -564,19 +559,84 @@ two version values will be used from first loaded file containing these
 version values.
 
 Will throw if given file's contents don't conform to L</"Specification"> -
-this may be used as a way to check file's syntax..
+this may be used to check file's syntax.
 
 =item find_paths
 
     @paths = $migrate->find_paths($from_version => $to_version);
 
-TODO
+Find and return all possible paths to migrate between given versions.
+
+If no paths found - return empty list. This may happens because you didn't
+loaded migrate files which contain required migrations or because there is
+no way to migrate between these versions (for example, if one of given
+versions is incorrect).
+
+Multiple paths can be found, for example, when your project had some
+branches which was later merged.
+
+Each found path returned as single ARRAYREF element in returned list.
+This ARRAYREF contains list of all intermediate versions, one by one,
+starting from C<$from_version> and ending with C<$to_version>.
+
+For example, if our project have this version history:
+
+        1.0.0
+          |
+        1.0.42
+         / \
+    1.1.0   1.2.0
+      |       |
+    1.1.8   1.2.3
+      | \     |
+      |  \----|
+    1.1.9   1.2.4
+      |       |
+    1.1.10  1.2.5
+
+then you'll probably have these migrate files:
+
+    1.1.10.migrate          1.0.0->…->1.0.42->1.1.0->…->1.1.10
+    1.2.5.migrate           1.0.0->…->1.0.42->1.2.0->…->1.2.3->1.2.4->1.2.5
+    1.1.8-1.2.4.migrate     1.0.0->…->1.0.42->1.1.0->…->1.1.8->1.2.4
+
+If you L</"load"> files C<1.2.5.migrate> and C<1.1.8-1.2.4.migrate> and
+then call C<< find_paths('1.0.42' => '1.2.5') >>, then it will return
+this list with two paths (in any order):
+
+    (
+        ['1.0.42', '1.1.0', …, '1.1.8', '1.2.4', '1.2.5'],
+        ['1.0.42', '1.2.0', …, '1.2.3', '1.2.4', '1.2.5'],
+    )
 
 =item get_steps
 
     @steps = $migrate->get_steps( \@versions );
 
-TODO
+Return list of all migration operations needed to migrate on path given in
+C<@versions>.
+
+For example, to get steps for first path returned by L</"find_paths">:
+
+    @steps = $migrate->get_steps( $migrate->find_paths($from=>$to) );
+
+Steps returned in order they'll be executed while L</"run"> for this path.
+Each element in C<@steps> is a HASHREF with these keys:
+
+    type    => one of these values:
+                'VERSION', 'before_upgrade', 'upgrade',
+                'downgrade', 'after_downgrade', 'RESTORE'
+
+    # these keys exists only if value of type key is one of:
+    #   VERSION, RESTORE
+    version => version number
+
+    # these keys exists only if value of type key is one of:
+    #   before_upgrade, upgrade, downgrade, after_downgrade
+    cmd     => command to run
+    args    => ARRAYREF of params for that command
+
+Will throw if unable to return requested steps.
 
 =item on
 
@@ -585,13 +645,54 @@ TODO
     $migrate = $migrate->on(VERSION => \&your_handler);
     $migrate = $migrate->on(error   => \&your_handler);
 
-TODO
+Set handler for given event.
+
+All handlers will be called only by L</"run">; they will get single
+parameter - step HASHREF (BACKUP handler will get step in same format as
+RESTORE), see L</"get_steps"> for details of that HASHREF contents.
+Also these handlers may use C<$ENV{MIGRATE_PREV_VERSION}> and
+C<$ENV{MIGRATE_NEXT_VERSION}> - see L</"run"> for more details.
+
+    BACKUP
+        Handler will be executed when project backup should be created:
+        before starting any new migration, except next one after RESTORE.
+        If handler throws then 'error' handler will be executed.
+        Default handler will throw (because it doesn't know how to backup
+        your project).
+        NOTE: If you'll use handler which doesn't really create and keep
+              backups for all versions then it will be impossible to do
+              RESTORE operation.
+    RESTORE
+        Handler will be executed when project should be restored from
+        backup: when downgrading between versions which contain RESTORE
+        operation or when migration fails.
+        If handler throws then 'error' handler will be executed.
+        Default handler will throw (because it doesn't know how to restore
+        your project).
+    VERSION
+        Handler will be executed after each successfull migration.
+        If handler throws then 'error' handler will be executed.
+        Default handler does nothing.
+    error
+        Handler will be executed when one of commands executed while
+        migration fails or when BACKUP, RESTORE or VERSION handlers throw.
+        If handler throws then try to restore version-before-migration
+        (without calling error handler again if it throws too).
+        Default handler will run $SHELL (to let you manually fix errors)
+        and throw if you $SHELL exit status != 0 (to let you choose what
+        to do next - continue migration if you fixed error or interrupt
+        migration to restore version-before-migration from backup).
 
 =item run
 
     $migrate->run( \@versions );
 
-TODO
+Will use L</"get_steps"> to get steps for path given in C<@versions> and
+execute them in order. Will also call handlers as described in L</"on">.
+
+Before executing each step will set C<$ENV{MIGRATE_PREV_VERSION}> to
+current version (which it will migrate from) and
+C<$ENV{MIGRATE_NEXT_VERSION}> to version it is trying to migrate to.
 
 =back
 

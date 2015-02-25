@@ -239,9 +239,9 @@ sub _do {
 }
 
 sub _e {
-    my ($loc, $msg, $near) = @_;
-    return "parse error: $msg at $loc->{file}:$loc->{line}"
-      . ($near eq q{} ? "\n" : " near '$near'\n");
+    my ($t, $msg, $near) = @_;
+    return "parse error: $msg at $t->{loc}{file}:$t->{loc}{line}"
+      . (length $near ? " near '$near'\n" : "\n");
 }
 
 sub _find_paths {
@@ -314,7 +314,7 @@ sub _preprocess { ## no critic (ProhibitExcessComplexity)
                 die _e($t2, 'second operation after DEFINE4 must be upgrade',         $t2->{op}) if $t2->{op} ne 'upgrade';
                 die _e($t3,  'third operation after DEFINE4 must be downgrade',       $t3->{op}) if $t3->{op} ne 'downgrade';
                 die _e($t4, 'fourth operation after DEFINE4 must be after_downgrade', $t4->{op}) if $t4->{op} ne 'after_downgrade';
-                $macro{$name} = [ $t1, $t2, $t3, $t4 ];
+                $macro{$name} = [ $t1, $t4, $t2, $t3 ];
             }
         }
         elsif (KW_VERSION->{$t->{op}}) {

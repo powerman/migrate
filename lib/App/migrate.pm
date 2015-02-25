@@ -547,11 +547,24 @@ backups while migration.
 
     $migrate = App::migrate->new;
 
+Create and return new App::migrate object.
+
 =item load
 
     $migrate->load('path/to/migrate');
 
-TODO
+Load migration commands into C<$migrate> object.
+
+You should load at least one file with migration commands before you can
+use L</"find_paths">, L</"get_steps"> or L</"run">.
+
+When loading multiple files, if they contain two adjoining 'VERSION'
+operations with same version values then migration commands between these
+two version values will be used from first loaded file containing these
+version values.
+
+Will throw if given file's contents don't conform to L</"Specification"> -
+this may be used as a way to check file's syntax..
 
 =item find_paths
 
@@ -584,6 +597,8 @@ TODO
 
 
 =head1 SYNTAX
+
+=head2 Goals
 
 Syntax of this file was designed to accomplish several goals:
 
@@ -627,7 +642,7 @@ file - so they won't really add complexity).>
 
 =back
 
-Example:
+=head2 Example
 
     VERSION 0.0.0
     # To upgrade from 0.0.0 to 0.1.0 we need to create new empty file and
@@ -646,14 +661,14 @@ Example:
     # To upgrade from 0.2.0 to 1.0.0 we need to run several commands,
     # and after downgrading we need to kill some background service.
     before_upgrade
-        patch    <0.2.0.patch >/dev/null
-        chmod +x some_daemon
+      patch    <0.2.0.patch >/dev/null
+      chmod +x some_daemon
     downgrade
-        patch -R <0.2.0.patch >/dev/null
+      patch -R <0.2.0.patch >/dev/null
     upgrade
-        ./some_daemon &
+      ./some_daemon &
     after_downgrade
-        killall -9 some_daemon
+      killall -9 some_daemon
     VERSION 1.0.0
 
     # Let's define some lazy helpers:
@@ -663,13 +678,13 @@ Example:
 
     DEFINE2 mkdir
     upgrade
-        mkdir "$@"
+      mkdir "$@"
     downgrade
-        rm -rf "$@"
+      rm -rf "$@"
 
     # ... and use it:
     only_upgrade
-        echo "Just upgraded to $MIGRATE_NEXT_VERSION"
+      echo "Just upgraded to $MIGRATE_NEXT_VERSION"
 
     VERSION 1.0.1
 
@@ -677,6 +692,129 @@ Example:
     mkdir dir1 dir2
 
     VERSION 1.1.0
+
+=head2 Specification
+
+Recommended name for file with upgrade/downgrade operations is either
+C<migrate> or C<< <version>.migrate >>.
+
+Each line in migrate file must be one of these:
+
+    line start with symbol "#"
+        For comments. Line is ignored.
+    line start with any non-space symbol, except "#"
+        Contain one or more elements separated by one or more space symbols:
+        - operation name (case-sensitive)
+        - zero or more params (any param may be quoted, params which
+          contain one of 5 symbols "\\\"\t\r\n" must be quoted)
+        Quoted params must be surrounded by double-quote symbol, and any
+        of mentioned above 5 symbols must be escaped by prepending slash.
+    line start with two spaces
+        Zero or more such lines after line with operation name form one
+        more, multiline, extra param for that operation (first two spaces
+        will be removed from start of each line before providing this param
+        to operation). Not all operations may have such multiline param.
+    empty line
+        If this line is between operations then it's ignored.
+        If this line is inside operation's multiline param - then
+        that multiline param will include this empty line.
+        If you will need to include empty line at end of multiline
+        param then you'll have to use line with two spaces instead.
+
+Supported operations:
+
+    VERSION
+        Must have exactly one param (version number).
+        Multiline param not supported.
+        This is delimiter between sequences of migrate operations.
+        Each file must contain 'VERSION' operation before any migrate
+        operations (i.e. before first 'VERSION' operation only
+        'DEFINE', 'DEFINE2' and 'DEFINE4' operations are allowed).
+        All operations after last 'VERSION' operation will be ignored.
+    before_upgrade
+    upgrade
+    downgrade
+    after_downgrade
+        These operations must be always used in pairs: first must be
+        one of 'before_upgrade' or 'upgrade' operation, second must be
+        one of 'downgrade' or 'after_downgrade' or 'RESTORE' operations.
+        These four operations may have zero or more params and optional
+        multiline param. If they won't have any params at all they'll be
+        processed like they have one (empty) multiline param.
+        Their params will be executed as a single shell command at
+        different stages of migration process and in different order:
+        - On each migration only commands between two nearest VERSION
+          operations will be processed.
+        - On upgrading (migrate forward from previous VERSION to next VERSION)
+          will be executed all 'before_upgrade' operations in forward order
+          then all 'upgrade' operations in forward order.
+        - On downgrading (migrate backward from next VERSION to previous)
+          will be executed all 'downgrade' operations in backward order,
+          then all 'after_downgrade' operations in backward order.
+        Shell command to use will be:
+        - If operation has one or more params - first param will become
+          executed command name, other params will become command params.
+          * If operation also has multiline param then it content will be
+            saved into temporary file and name of that file will be added
+            at end of command's params.
+        - Else multiline param will be saved into temporary file (with
+          prepended shebang "#!/bin/bash -ex" if first line of multiline
+          param doesn't start with "#!"), which will be made executable
+          and run without any params.
+    RESTORE
+        Doesn't support any params, neither usual nor multiline.
+        Can be used only after 'before_upgrade' or 'upgrade' operations.
+        When one or more 'RESTORE' operations are used between some 'VERSION'
+        operations then all 'downgrade' and 'after_downgrade' operations
+        between same 'VERSION' operaions will be ignored and on
+        downgrading previous version will be restored from backup.
+    DEFINE
+        This operation must have only one non-multiline param - name of
+        defined macro. This name must not be same as one of existing
+        operation names, both documented here or created by one of
+        previous 'DEFINE' or 'DEFINE2' or 'DEFINE4' operations.
+        Next operation must be one of 'before_upgrade', 'upgrade',
+        'downgrade' or 'after_downgrade' - it will be substituted in place
+        of all next operations matching name of this macro.
+        When substituting macro it may happens what both this macro
+        definition have some normal params and multiline param, and
+        substituted operation also have some it's own normal params and
+        multiline param. All these params will be combined into single
+        command and it params in this way:
+        - If macro definition doesn't have any params - params of
+          substituted operation will be handled as usually for 'upgrade'
+          etc. operations.
+        - If macro definition have some params - they will be handled as
+          usually for 'upgrade' etc. operations, so we'll always get some
+          command and optional params for it.
+          * Next, all normal params of substituted command (if any) will
+            be appended to that command params.
+          * Next, if substituted command have multiline param then it will
+            be saved to temporary file and name of that file will be
+            appended to that command params.
+    DEFINE2
+        Work similar to DEFINE, but require two next operations after it:
+        first must be one of 'before_upgrade' or 'upgrade', and second
+        must be one of 'downgrade' or 'after_downgrade'.
+        Params of both operations will be combined with params of
+        substituted operation as explained above.
+    DEFINE4
+        Work similar to DEFINE, but require four next operations after it:
+        first must be 'before_upgrade', second - 'upgrade', third -
+        'downgrade', fourth - 'after_downgrade'.
+        Params of all four operations will be combined with params of
+        substituted operation as explained above.
+
+While executing any commands two environment variables will be set:
+C<$MIGRATE_PREV_VERSION> and C<$MIGRATE_NEXT_VERSION> (first is always
+version we're migrating from, and second is always version we're migrating
+to - i.e. while downgrading C<$MIGRATE_NEXT_VERSION> will be lower/older
+version than C<$MIGRATE_PREV_VERSION>)
+
+All executed commands must complete without error, otherwise emergency
+shell will be started and user should either fix the error and C<exit>
+from shell to continue migration, or C<exit 1> from shell to interrupt
+migration and restore previous-before-this-migration version from backup.
 
 
 =head1 SUPPORT

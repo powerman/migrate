@@ -285,7 +285,7 @@ sub _preprocess { ## no critic (ProhibitExcessComplexity)
         my $t = shift @tokens;
         if ($t->{op} =~ /\ADEFINE[24]?\z/ms) {
             die _e($t, "$t->{op} must have one param", "@{$t->{args}}") if 1 != @{$t->{args}};
-            die _e($t, "bad name for $t->{op}", $t->{args}[0]) if $t->{args}[0] !~ /\A\S+\z/ms;
+            die _e($t, "bad name for $t->{op}", $t->{args}[0]) if $t->{args}[0] !~ /\A(?!#)\S+\z/ms;
             die _e($t, "no data allowed for $t->{op}", $t->{data}) if $t->{data} ne q{};
             my $name = $t->{args}[0];
             die _e($t, "you can't redefine keyword '$name'") if KW->{$name};

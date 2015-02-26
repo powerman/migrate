@@ -681,7 +681,7 @@ project).
 
 =item 'VERSION' event
 
-Handler will be executed after each successfull migration.
+Handler will be executed after each successful migration.
 
 If handler throws then 'error' handler will be executed.
 
@@ -931,9 +931,9 @@ params.
 
 =item *
 
-Else multiline param will be saved into temporary file (with prepended
-shebang C<#!/bin/bash -ex> if first line of multiline param doesn't start
-with C<#!>), which will be made executable and run without any params.
+Else multiline param will be saved into temporary file (after shebang
+C<#!/bin/bash -ex> if first line of multiline param doesn't start with
+C<#!>), which will be made executable and run without any params.
 
 =back
 
@@ -945,7 +945,7 @@ Can be used only after 'before_upgrade' or 'upgrade' operations.
 
 When one or more 'RESTORE' operations are used between some 'VERSION'
 operations then all 'downgrade' and 'after_downgrade' operations between
-same 'VERSION' operaions will be ignored and on downgrading previous
+same 'VERSION' operations will be ignored and on downgrading previous
 version will be restored from backup.
 
 =item DEFINE

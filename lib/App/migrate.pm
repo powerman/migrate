@@ -653,35 +653,54 @@ RESTORE), see L</"get_steps"> for details of that HASHREF contents.
 Also these handlers may use C<$ENV{MIGRATE_PREV_VERSION}> and
 C<$ENV{MIGRATE_NEXT_VERSION}> - see L</"run"> for more details.
 
-    BACKUP
-        Handler will be executed when project backup should be created:
-        before starting any new migration, except next one after RESTORE.
-        If handler throws then 'error' handler will be executed.
-        Default handler will throw (because it doesn't know how to backup
-        your project).
-        NOTE: If you'll use handler which doesn't really create and keep
-              backups for all versions then it will be impossible to do
-              RESTORE operation.
-    RESTORE
-        Handler will be executed when project should be restored from
-        backup: when downgrading between versions which contain RESTORE
-        operation or when migration fails.
-        If handler throws then 'error' handler will be executed.
-        Default handler will throw (because it doesn't know how to restore
-        your project).
-    VERSION
-        Handler will be executed after each successfull migration.
-        If handler throws then 'error' handler will be executed.
-        Default handler does nothing.
-    error
-        Handler will be executed when one of commands executed while
-        migration fails or when BACKUP, RESTORE or VERSION handlers throw.
-        If handler throws then try to restore version-before-migration
-        (without calling error handler again if it throws too).
-        Default handler will run $SHELL (to let you manually fix errors)
-        and throw if you $SHELL exit status != 0 (to let you choose what
-        to do next - continue migration if you fixed error or interrupt
-        migration to restore version-before-migration from backup).
+=over
+
+=item 'BACKUP' event
+
+Handler will be executed when project backup should be created: before
+starting any new migration, except next one after RESTORE.
+
+If handler throws then 'error' handler will be executed.
+
+Default handler will throw (because it doesn't know how to backup your
+project).
+
+NOTE: If you'll use handler which doesn't really create and keep backups
+for all versions then it will be impossible to do RESTORE operation.
+
+=item 'RESTORE' event
+
+Handler will be executed when project should be restored from backup: when
+downgrading between versions which contain RESTORE operation or when
+migration fails.
+
+If handler throws then 'error' handler will be executed.
+
+Default handler will throw (because it doesn't know how to restore your
+project).
+
+=item 'VERSION' event
+
+Handler will be executed after each successfull migration.
+
+If handler throws then 'error' handler will be executed.
+
+Default handler does nothing.
+
+=item 'error' event
+
+Handler will be executed when one of commands executed while migration
+fails or when BACKUP, RESTORE or VERSION handlers throw.
+
+If handler throws then try to restore version-before-migration (without
+calling error handler again if it throws too).
+
+Default handler will run $SHELL (to let you manually fix errors) and throw
+if you $SHELL exit status != 0 (to let you choose what to do next -
+continue migration if you fixed error or interrupt migration to restore
+version-before-migration from backup).
+
+=back
 
 =item run
 
@@ -801,110 +820,191 @@ C<migrate> or C<< <version>.migrate >>.
 
 Each line in migrate file must be one of these:
 
-    line start with symbol "#"
-        For comments. Line is ignored.
-    line start with any non-space symbol, except "#"
-        Contain one or more elements separated by one or more space symbols:
-        - operation name (case-sensitive)
-        - zero or more params (any param may be quoted, params which
-          contain one of 5 symbols "\\\"\t\r\n" must be quoted)
-        Quoted params must be surrounded by double-quote symbol, and any
-        of mentioned above 5 symbols must be escaped by prepending slash.
-    line start with two spaces
-        Zero or more such lines after line with operation name form one
-        more, multiline, extra param for that operation (first two spaces
-        will be removed from start of each line before providing this param
-        to operation). Not all operations may have such multiline param.
-    empty line
-        If this line is between operations then it's ignored.
-        If this line is inside operation's multiline param - then
-        that multiline param will include this empty line.
-        If you will need to include empty line at end of multiline
-        param then you'll have to use line with two spaces instead.
+=over
+
+=item * line start with symbol "#"
+
+For comments. Line is ignored.
+
+=item * line start with any non-space symbol, except "#"
+
+Contain one or more elements separated by one or more space symbols:
+operation name (case-sensitive), zero or more params (any param may be
+quoted, params which contain one of 5 symbols "\\\"\t\r\n" must be
+quoted).
+
+Quoted params must be surrounded by double-quote symbol, and any of
+mentioned above 5 symbols must be escaped like shown above.
+
+=item * line start with two spaces
+
+Zero or more such lines after line with operation name form one more,
+multiline, extra param for that operation (first two spaces will be
+removed from start of each line before providing this param to operation).
+
+Not all operations may have such multiline param.
+
+=item * empty line
+
+If this line is between operations then it's ignored.
+
+If this line is inside operation's multiline param - then that multiline
+param will include this empty line.
+
+If you will need to include empty line at end of multiline param then
+you'll have to use line with two spaces instead.
+
+=back
 
 Supported operations:
 
-    VERSION
-        Must have exactly one param (version number).
-        Multiline param not supported.
-        This is delimiter between sequences of migrate operations.
-        Each file must contain 'VERSION' operation before any migrate
-        operations (i.e. before first 'VERSION' operation only
-        'DEFINE', 'DEFINE2' and 'DEFINE4' operations are allowed).
-        All operations after last 'VERSION' operation will be ignored.
-    before_upgrade
-    upgrade
-    downgrade
-    after_downgrade
-        These operations must be always used in pairs: first must be
-        one of 'before_upgrade' or 'upgrade' operation, second must be
-        one of 'downgrade' or 'after_downgrade' or 'RESTORE' operations.
-        These four operations may have zero or more params and optional
-        multiline param. If they won't have any params at all they'll be
-        processed like they have one (empty) multiline param.
-        Their params will be executed as a single shell command at
-        different stages of migration process and in different order:
-        - On each migration only commands between two nearest VERSION
-          operations will be processed.
-        - On upgrading (migrate forward from previous VERSION to next VERSION)
-          will be executed all 'before_upgrade' operations in forward order
-          then all 'upgrade' operations in forward order.
-        - On downgrading (migrate backward from next VERSION to previous)
-          will be executed all 'downgrade' operations in backward order,
-          then all 'after_downgrade' operations in backward order.
-        Shell command to use will be:
-        - If operation has one or more params - first param will become
-          executed command name, other params will become command params.
-          * If operation also has multiline param then it content will be
-            saved into temporary file and name of that file will be added
-            at end of command's params.
-        - Else multiline param will be saved into temporary file (with
-          prepended shebang "#!/bin/bash -ex" if first line of multiline
-          param doesn't start with "#!"), which will be made executable
-          and run without any params.
-    RESTORE
-        Doesn't support any params, neither usual nor multiline.
-        Can be used only after 'before_upgrade' or 'upgrade' operations.
-        When one or more 'RESTORE' operations are used between some 'VERSION'
-        operations then all 'downgrade' and 'after_downgrade' operations
-        between same 'VERSION' operaions will be ignored and on
-        downgrading previous version will be restored from backup.
-    DEFINE
-        This operation must have only one non-multiline param - name of
-        defined macro. This name must not be same as one of existing
-        operation names, both documented here or created by one of
-        previous 'DEFINE' or 'DEFINE2' or 'DEFINE4' operations.
-        Next operation must be one of 'before_upgrade', 'upgrade',
-        'downgrade' or 'after_downgrade' - it will be substituted in place
-        of all next operations matching name of this macro.
-        When substituting macro it may happens what both this macro
-        definition have some normal params and multiline param, and
-        substituted operation also have some it's own normal params and
-        multiline param. All these params will be combined into single
-        command and it params in this way:
-        - If macro definition doesn't have any params - params of
-          substituted operation will be handled as usually for 'upgrade'
-          etc. operations.
-        - If macro definition have some params - they will be handled as
-          usually for 'upgrade' etc. operations, so we'll always get some
-          command and optional params for it.
-          * Next, all normal params of substituted command (if any) will
-            be appended to that command params.
-          * Next, if substituted command have multiline param then it will
-            be saved to temporary file and name of that file will be
-            appended to that command params.
-    DEFINE2
-        Work similar to DEFINE, but require two next operations after it:
-        first must be one of 'before_upgrade' or 'upgrade', and second
-        must be one of 'downgrade' or 'after_downgrade'.
-        Params of both operations will be combined with params of
-        substituted operation as explained above.
-    DEFINE4
-        Work similar to DEFINE, but require four next operations after it:
-        first must be 'before_upgrade', second - 'upgrade', third -
-        'downgrade', fourth - 'after_downgrade'.
-        Params of all four operations will be combined with params of
-        substituted operation as explained above.
+=over
+
+=item VERSION
+
+Must have exactly one param (version number). Some symbols are not allowed
+in version numbers: special (0x00-0x1F,0x7F), both slash, all three
+quotes, ?, * and space.
+
+Multiline param not supported.
+
+This is delimiter between sequences of migrate operations.
+
+Each file must contain 'VERSION' operation before any migrate operations
+(i.e. before first 'VERSION' operation only 'DEFINE', 'DEFINE2' and
+'DEFINE4' operations are allowed).
+
+All operations after last 'VERSION' operation will be ignored.
+
+=item before_upgrade
+
+=item upgrade
+
+=item downgrade
+
+=item after_downgrade
+
+These operations must be always used in pairs: first must be one of
+'before_upgrade' or 'upgrade' operation, second must be one of 'downgrade'
+or 'after_downgrade' or 'RESTORE' operations.
+
+These four operations may have zero or more params and optional multiline
+param. If they won't have any params at all they'll be processed like they
+have one (empty) multiline param.
+
+Their params will be executed as a single shell command at different
+stages of migration process and in different order:
+
+=over
+
+=item *
+
+On each migration only commands between two nearest VERSION operations
+will be processed.
+
+=item *
+
+On upgrading (migrate forward from previous VERSION to next VERSION) will
+be executed all 'before_upgrade' operations in forward order then all
+'upgrade' operations in forward order.
+
+=item *
+
+On downgrading (migrate backward from next VERSION to previous) will be
+executed all 'downgrade' operations in backward order, then all
+'after_downgrade' operations in backward order.
+
+=back
+
+Shell command to use will be:
+
+=over
+
+=item *
+
+If operation has one or more params - first param will become executed
+command name, other params will become command params.
+
+If operation also has multiline param then it content will be saved into
+temporary file and name of that file will be added at end of command's
+params.
+
+=item *
+
+Else multiline param will be saved into temporary file (with prepended
+shebang C<#!/bin/bash -ex> if first line of multiline param doesn't start
+with C<#!>), which will be made executable and run without any params.
+
+=back
+
+=item RESTORE
+
+Doesn't support any params, neither usual nor multiline.
+
+Can be used only after 'before_upgrade' or 'upgrade' operations.
+
+When one or more 'RESTORE' operations are used between some 'VERSION'
+operations then all 'downgrade' and 'after_downgrade' operations between
+same 'VERSION' operaions will be ignored and on downgrading previous
+version will be restored from backup.
+
+=item DEFINE
+
+This operation must have only one non-multiline param - name of defined
+macro. This name must not be same as one of existing operation names, both
+documented here or created by one of previous 'DEFINE' or 'DEFINE2' or
+'DEFINE4' operations.
+
+Next operation must be one of 'before_upgrade', 'upgrade', 'downgrade' or
+'after_downgrade' - it will be substituted in place of all next operations
+matching name of this macro.
+
+When substituting macro it may happens what both this macro definition
+have some normal params and multiline param, and substituted operation
+also have some it's own normal params and multiline param. All these
+params will be combined into single command and it params in this way:
+
+=over
+
+=item *
+
+If macro definition doesn't have any params - params of substituted
+operation will be handled as usually for 'upgrade' etc. operations.
+
+=item *
+
+If macro definition have some params - they will be handled as usually for
+'upgrade' etc. operations, so we'll always get some command and optional
+params for it.
+
+Next, all normal params of substituted command (if any) will be appended
+to that command params.
+
+Next, if substituted command have multiline param then it will be saved to
+temporary file and name of that file will be appended to that command
+params.
+
+=back
+
+=item DEFINE2
+
+Work similar to DEFINE, but require two next operations after it: first
+must be one of 'before_upgrade' or 'upgrade', and second must be one of
+'downgrade' or 'after_downgrade'.
+
+Params of both operations will be combined with params of substituted
+operation as explained above.
+
+=item DEFINE4
+
+Work similar to DEFINE, but require four next operations after it: first
+must be 'before_upgrade', second - 'upgrade', third - 'downgrade', fourth
+- 'after_downgrade'.
+
+Params of all four operations will be combined with params of substituted
+operation as explained above.
+
+=back
 
 While executing any commands two environment variables will be set:
 C<$MIGRATE_PREV_VERSION> and C<$MIGRATE_NEXT_VERSION> (first is always

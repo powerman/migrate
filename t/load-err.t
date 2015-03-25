@@ -167,7 +167,7 @@ MIGRATE
     $file->spew_utf8(<<"MIGRATE");
 DEFINE2 only_upgrade
 upgrade
-downgrade /bin/true
+downgrade true
 $define only_upgrade
 MIGRATE
     throws_ok { $migrate->load($file) } qr/already defined/ms;
@@ -278,7 +278,7 @@ upgrade
 downgrade
 after_downgrade
 VERSION 0
-bug/define4_order /bin/true
+bug/define4_order true
 VERSION 1
 MIGRATE
 lives_ok  { $migrate->load($file) } 'bug: DEFINE4 order';

@@ -39,20 +39,22 @@ VERSION 0.2.0
 # To upgrade from 0.2.0 to 1.0.0 we need to run several commands,
 # and after downgrading we need to kill some background service.
 before_upgrade
-  patch    <0.2.0.patch >/dev/null
+  patch -E   <0.2.0.patch >/dev/null
+  rm -f *.orig
   chmod +x some_daemon
 downgrade
-  patch -R <0.2.0.patch >/dev/null
+  patch -E -R <0.2.0.patch >/dev/null
+  rm -f *.orig
 upgrade
   ./some_daemon &
 after_downgrade
-  killall -9 some_daemon
+  pkill -9 -x -f '/bin/sh ./some_daemon'
 VERSION 1.0.0
 
 # Let's define some lazy helpers:
 DEFINE2 only_upgrade
 upgrade
-downgrade /bin/true
+downgrade true
 
 DEFINE2 mkdir
 upgrade
@@ -111,10 +113,10 @@ PATCH
 
     run('0.2.0' => '1.0.0');
     ok -e 'some_daemon', '... ./some_daemon exists';
-    is system('ps | grep -q some_daemon'), 0, '... some_daemon is running';
+    is system('pgrep -x -f "/bin/sh ./some_daemon" >/dev/null'), 0, '... some_daemon is running';
 
     run('1.0.0' => '0.2.0');
-    isnt system('ps | grep -q some_daemon'), 0, '... some_daemon is not running';
+    isnt system('pgrep -x -f "/bin/sh ./some_daemon" >/dev/null'), 0, '... some_daemon is not running';
     ok !-e 'some_daemon', '... ./some_daemon does not exists';
 
     path('0.2.0.patch')->remove;

@@ -325,7 +325,7 @@ cases.
     # Let's define some lazy helpers:
     DEFINE2 only_upgrade
     upgrade
-    downgrade /bin/true
+    downgrade true
 
     DEFINE2 mkdir
     upgrade
@@ -436,7 +436,7 @@ Supported operations:
         params.
 
     - Else multiline param will be saved into temporary file (after shebang
-    `#!/bin/bash -ex` if first line of multiline param doesn't start with
+    `#!/path/to/bash -ex` if first line of multiline param doesn't start with
     `#!`), which will be made executable and run without any params.
 
 - RESTORE

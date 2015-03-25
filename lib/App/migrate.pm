@@ -379,7 +379,8 @@ sub _preprocess { ## no critic (ProhibitExcessComplexity)
 
 sub _shebang {
     my ($script) = @_;
-    return $script =~ /\A#!/ms ? $script : "#!/bin/bash -ex\n$script";
+    state $bin = (grep { -x "$_/bash" } split /:/ms, $ENV{PATH})[0] or die 'bash not found';
+    return $script =~ /\A#!/ms ? $script : "#!$bin/bash -ex\n$script";
 }
 
 sub _tokenize {
@@ -794,7 +795,7 @@ file - so they won't really add complexity).>
     # Let's define some lazy helpers:
     DEFINE2 only_upgrade
     upgrade
-    downgrade /bin/true
+    downgrade true
 
     DEFINE2 mkdir
     upgrade
@@ -932,7 +933,7 @@ params.
 =item *
 
 Else multiline param will be saved into temporary file (after shebang
-C<#!/bin/bash -ex> if first line of multiline param doesn't start with
+C<#!/path/to/bash -ex> if first line of multiline param doesn't start with
 C<#!>), which will be made executable and run without any params.
 
 =back

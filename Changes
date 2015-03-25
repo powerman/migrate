@@ -1,6 +1,7 @@
 Revision history for App-migrate
 
 {{$NEXT}}
+	- Fix exit code when killed by signal.
 
 v0.1.2  2015-03-25 03:21:27 EET
 	- Fix *BSD compatibility.

@@ -411,7 +411,7 @@ sub _tokenize {
             }
             die _e({loc=>$loc}, 'bad operation param', $1) if $args =~ /\G(.+)\z/msgc; ## no critic (ProhibitCaptureWithoutTest)
             push @tokens, {
-                loc => $loc,
+                loc => {%{ $loc }},
                 op  => $op,
                 args=> \@args,
                 data=> q{},

@@ -1,6 +1,6 @@
 requires 'perl', '5.010001';
 requires 'File::Temp';
-requires 'List::Util';
+requires 'List::Util', '1.33';
 requires 'Getopt::Long';
 
 on configure => sub {

@@ -42,7 +42,7 @@
          "requires" : {
             "File::Temp" : "0",
             "Getopt::Long" : "0",
-            "List::Util" : "0",
+            "List::Util" : "1.33",
             "perl" : "5.010001"
          }
       },

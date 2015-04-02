@@ -1,4 +1,5 @@
 requires 'perl', '5.010001';
+
 requires 'File::Temp';
 requires 'List::Util', '1.33';
 requires 'Getopt::Long';
@@ -9,10 +10,10 @@ on configure => sub {
 };
 
 on test => sub {
-    requires 'Test::More', '0.96';
-    requires 'Test::Exception';
-    requires 'Test::Output';
     requires 'Path::Tiny', '0.060';
+    requires 'Test::Exception';
+    requires 'Test::More', '0.96';
+    requires 'Test::Output';
 };
 
 on develop => sub {

@@ -42,13 +42,13 @@ sub main {
                 'h|help'=> \&usage,
         ) or usage();
         if ($check && @_) {
-            usage();
+                usage();
         }
         elsif (!$is_path && @_ != 2) {
-            usage();
+                usage();
         }
         elsif ($is_path && @_ <= 2) {
-            usage();
+                usage();
         }
         my @versions = @_;
 
@@ -66,21 +66,21 @@ sub main {
         }
 
         if ($is_path) {
-            $migrate->get_steps(\@versions);
+                $migrate->get_steps(\@versions);
         }
         else {
-            my @paths = $migrate->find_paths($versions[0], $versions[1]);
-            if (0 == @paths) {
-                    err "unable to find migration path from $versions[0] to $versions[1]";
-            }
-            elsif (1 == @paths) {
-                    @versions = @{ $paths[0] };
-            }
-            else {
-                    err join "\n",
-                            'found more than one upgrade path, use one of these options to choose a path:',
-                            map {"\t-p @{$_}"} @paths;
-            }
+                my @paths = $migrate->find_paths($versions[0], $versions[1]);
+                if (0 == @paths) {
+                        err "unable to find migration path from $versions[0] to $versions[1]";
+                }
+                elsif (1 == @paths) {
+                        @versions = @{ $paths[0] };
+                }
+                else {
+                        err join "\n",
+                                'found more than one upgrade path, use one of these options to choose a path:',
+                                map {"\t-p @{$_}"} @paths;
+                }
         }
 
         $migrate->on(BACKUP  => sub { system($b_cmd) == 0 or die "BACKUP failed\n"  })

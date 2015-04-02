@@ -2,7 +2,6 @@ use strict;
 use POSIX qw(locale_h); BEGIN { setlocale(LC_MESSAGES,'en_US.UTF-8') } # avoid UTF-8 in $!
 use Test::More;
 use Test::Exception;
-use POSIX qw(locale_h); BEGIN { setlocale(LC_MESSAGES,'en_US.UTF-8') } # avoid UTF-8 in $!
 use Path::Tiny qw( path tempdir tempfile );
 use App::migrate;
 

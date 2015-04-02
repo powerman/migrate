@@ -72,6 +72,7 @@ sub load {
     my ($self, $file) = @_;
 
     open my $fh, '<:encoding(UTF-8)', $file or croak "open($file): $!";
+    croak "'$file' is not a plain file" if !-f $file;
     my @op = _preprocess(_tokenize($fh, { file => $file, line => 0 }));
     close $fh or croak "close($file): $!";
 

@@ -14,6 +14,9 @@ my $guard   = bless {};
 sub DESTROY { chdir q{/} }
 chdir $proj or die "chdir($proj): $!";
 
+throws_ok { $migrate->load('/dev/null') } qr/plain file/msi;
+throws_ok { $migrate->load('/dev')      } qr/plain file/msi;
+
 $file->remove;
 throws_ok { $migrate->load($file) } qr/No such file/msi;
 

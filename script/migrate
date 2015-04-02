@@ -31,29 +31,29 @@ sub main {
         my $v_cmd       = 'echo Current version is $MIGRATE_NEXT_VERSION';
         my @files       = qw( migrate );
         my $is_path     = 0;
-        my $check       = undef;
+        my $is_check    = 0;
         GetOptionsFromArray(\@_,
                 'B=s'   => \$b_cmd,
                 'R=s'   => \$r_cmd,
                 'V=s'   => \$v_cmd,
                 'f=s@'  => \@files,
                 'p'     => \$is_path,
-                'c=s'   => \$check,
+                'c'     => \$is_check,
                 'h|help'=> \&usage,
         ) or usage();
-        if ($check && @_) {
-                usage();
+        if ($is_check) {
+                usage() if 2 <= @_;
         }
-        elsif (!$is_path && @_ != 2) {
-                usage();
+        elsif ($is_path) {
+                usage() if 2 >= @_;
         }
-        elsif ($is_path && @_ <= 2) {
-                usage();
+        else {
+                usage() if 2 != @_;
         }
         my @versions = @_;
 
-        if (defined $check) {
-                App::migrate->new->load($check);
+        if ($is_check) {
+                App::migrate->new->load($_[0] // 'migrate');
                 return;
         }
         elsif ($versions[0] eq $versions[-1]) {

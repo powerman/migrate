@@ -6,7 +6,7 @@ use utf8;
 use Carp;
 ## no critic (RequireCarping)
 
-our $VERSION = 'v0.1.4';
+our $VERSION = 'v0.1.5';
 
 use List::Util qw( first any );
 use File::Temp qw( tempfile ); # don't use Path::Tiny to have temp files in error $SHELL
@@ -454,7 +454,7 @@ App::migrate - upgrade / downgrade project
 
 =head1 VERSION
 
-This document describes App::migrate version v0.1.4
+This document describes App::migrate version v0.1.5
 
 
 =head1 SYNOPSIS

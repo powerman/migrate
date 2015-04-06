@@ -186,7 +186,7 @@ sub run {
                     version         => $from,
                     prev_version    => $from,
                     next_version    => $path[-1],
-                });
+                }, 1);
                 warn "Successfully undone interrupted migration by RESTORE $from\n";
                 1;
             } or warn "Failed to RESTORE $from: $@";
@@ -209,7 +209,7 @@ sub _data2arg {
 }
 
 sub _do {
-    my ($self, $step) = @_;
+    my ($self, $step, $is_fatal) = @_;
     local $ENV{MIGRATE_PREV_VERSION} = $step->{prev_version};
     local $ENV{MIGRATE_NEXT_VERSION} = $step->{next_version};
     eval {
@@ -228,6 +228,7 @@ sub _do {
         1;
     }
     or do {
+        die $@ if $is_fatal;
         warn $@;
         $self->{on}{error}->($step);
     };

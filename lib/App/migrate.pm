@@ -57,14 +57,7 @@ sub get_steps {
         my ($prev, $next) = @path;
         croak "unknown version '$prev'" if !$self->{paths}{$prev};
         croak "no one-step migration from '$prev' to '$next'" if !$self->{paths}{$prev}{$next};
-        my @steps = @{ $self->{paths}{$prev}{$next} };
-        if (@all_steps && any { $_->{type} eq 'RESTORE' } @steps) {
-            my $v = $all_steps[0]{prev_version};
-            @all_steps = map { +{ %{$_}, prev_version=>$v } } @steps;
-        }
-        else {
-            push @all_steps, @steps;
-        }
+        push @all_steps, @{ $self->{paths}{$prev}{$next} };
     }
     return @all_steps;
 }
@@ -172,9 +165,9 @@ sub run {
                     prev_version    => $prev,
                     next_version    => $next,
                 });
-                $from = $prev;
             }
             $just_restored = 0;
+            $from = $prev;
             for my $step ($self->get_steps([$prev, $next])) {
                 $self->_do($step);
                 if ($step->{type} eq 'RESTORE') {

@@ -2,6 +2,9 @@ Revision history for App-migrate
 
 {{$NEXT}}
 
+v0.1.6  2015-04-06 03:02:59 EEST
+	- Fix {prev_version} after RESTORE optimization
+
 v0.1.5  2015-04-02 07:14:12 EEST
 	- Fix load() now throw on non plain file.
 	- Fix migrate: -c check 'migrate' by default.

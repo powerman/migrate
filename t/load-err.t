@@ -33,42 +33,42 @@ lives_ok  { $migrate->load($file) } 'empty lines and comments';
 $file->spew_utf8(<<'MIGRATE');
  
 MIGRATE
-throws_ok { $migrate->load($file) } qr/bad token/ms, 'line with one space';
+throws_ok { $migrate->load($file) } qr/bad token/msi, 'line with one space';
 
 $file->spew_utf8(<<'MIGRATE');
  # comment
 MIGRATE
-throws_ok { $migrate->load($file) } qr/bad token/ms, 'line begins with one space';
+throws_ok { $migrate->load($file) } qr/bad token/msi, 'line begins with one space';
 
 $file->spew_utf8(<<"MIGRATE");
 \t# comment
 MIGRATE
-throws_ok { $migrate->load($file) } qr/bad token/ms, 'line begins with tab';
+throws_ok { $migrate->load($file) } qr/bad token/msi, 'line begins with tab';
 
 $file->spew_utf8(<<'MIGRATE');
   true
 MIGRATE
-throws_ok { $migrate->load($file) } qr/data before operation/ms;
+throws_ok { $migrate->load($file) } qr/data before operation/msi;
 
 $file->spew_utf8(<<'MIGRATE');
 VERSION "
 MIGRATE
-throws_ok { $migrate->load($file) } qr/bad operation param/ms;
+throws_ok { $migrate->load($file) } qr/bad operation param/msi;
 
 $file->spew_utf8(<<'MIGRATE');
 VERSION "1\.0"
 MIGRATE
-throws_ok { $migrate->load($file) } qr/bad operation param/ms;
+throws_ok { $migrate->load($file) } qr/bad operation param/msi;
 
 $file->spew_utf8(<<'MIGRATE');
 VERSION "1.0\"
 MIGRATE
-throws_ok { $migrate->load($file) } qr/bad operation param/ms;
+throws_ok { $migrate->load($file) } qr/bad operation param/msi;
 
 $file->spew_utf8(<<'MIGRATE');
 VERSION 1\.0
 MIGRATE
-throws_ok { $migrate->load($file) } qr/bad operation param/ms;
+throws_ok { $migrate->load($file) } qr/bad operation param/msi;
 
 $file->spew_utf8(<<'MIGRATE');
 VERSION     "1.0"
@@ -80,41 +80,41 @@ lives_ok  { $migrate->load($file) } 'supported escapes';
 $file->spew_utf8(<<'MIGRATE');
 bad_op
 MIGRATE
-throws_ok { $migrate->load($file) } qr/unknown operation/ms;
+throws_ok { $migrate->load($file) } qr/unknown operation/msi;
 
 $file->spew_utf8(<<'MIGRATE');
 DEFINE alias
 upgrade
 alias
 MIGRATE
-throws_ok { $migrate->load($file) } qr/alias require command or data/ms;
+throws_ok { $migrate->load($file) } qr/'alias' require command or data/msi;
 
 $file->spew_utf8(<<'MIGRATE');
 before_upgrade
 MIGRATE
-throws_ok { $migrate->load($file) } qr/before_upgrade require command or data/ms;
+throws_ok { $migrate->load($file) } qr/'before_upgrade' require command or data/msi;
 
 $file->spew_utf8(<<'MIGRATE');
 upgrade
 MIGRATE
-throws_ok { $migrate->load($file) } qr/upgrade require command or data/ms;
+throws_ok { $migrate->load($file) } qr/'upgrade' require command or data/msi;
 
 $file->spew_utf8(<<'MIGRATE');
 downgrade
 MIGRATE
-throws_ok { $migrate->load($file) } qr/downgrade require command or data/ms;
+throws_ok { $migrate->load($file) } qr/'downgrade' require command or data/msi;
 
 $file->spew_utf8(<<'MIGRATE');
 after_downgrade
 MIGRATE
-throws_ok { $migrate->load($file) } qr/after_downgrade require command or data/ms;
+throws_ok { $migrate->load($file) } qr/'after_downgrade' require command or data/msi;
 
 $file->spew_utf8(<<'MIGRATE');
 VERSION 1
 upgrade true
 RESTORE param
 MIGRATE
-throws_ok { $migrate->load($file) } qr/RESTORE must have no params/ms;
+throws_ok { $migrate->load($file) } qr/'RESTORE' must have no params/msi;
 
 $file->spew_utf8(<<'MIGRATE');
 VERSION 1
@@ -123,93 +123,93 @@ upgrade
 RESTORE
   param
 MIGRATE
-throws_ok { $migrate->load($file) } qr/no data allowed for RESTORE/ms;
+throws_ok { $migrate->load($file) } qr/no data allowed for 'RESTORE'/msi;
 
 $file->spew_utf8(<<'MIGRATE');
 VERSION
 MIGRATE
-throws_ok { $migrate->load($file) } qr/VERSION must have one param/ms;
+throws_ok { $migrate->load($file) } qr/'VERSION' must have one param/msi;
 
 $file->spew_utf8(<<'MIGRATE');
 VERSION 1 2
 MIGRATE
-throws_ok { $migrate->load($file) } qr/VERSION must have one param/ms;
+throws_ok { $migrate->load($file) } qr/'VERSION' must have one param/msi;
 
 for my $c (q{ }, "\t", "\r", qw( \\\\ / ? * ` \" ' )) {
     $file->spew_utf8(<<"MIGRATE");
 VERSION "1${c}2"
 MIGRATE
-    throws_ok { $migrate->load($file) } qr/bad value for VERSION/ms;
+    throws_ok { $migrate->load($file) } qr/bad value for 'VERSION'/msi;
 }
 
 $file->spew_utf8(<<'MIGRATE');
 VERSION 1
   2
 MIGRATE
-throws_ok { $migrate->load($file) } qr/no data allowed for VERSION/ms;
+throws_ok { $migrate->load($file) } qr/no data allowed for 'VERSION'/msi;
 
 
 for my $define (qw( DEFINE DEFINE2 DEFINE4 )) {
     $file->spew_utf8(<<"MIGRATE");
 $define one two
 MIGRATE
-    throws_ok { $migrate->load($file) } qr/\Q$define\E must have one param/ms;
+    throws_ok { $migrate->load($file) } qr/'\Q$define\E' must have one param/msi;
     $file->spew_utf8(<<"MIGRATE");
 $define "bug/macro name"
 MIGRATE
-    throws_ok { $migrate->load($file) } qr/bad name for \Q$define\E\b/ms;
+    throws_ok { $migrate->load($file) } qr/bad name for '\Q$define\E'/msi;
     $file->spew_utf8(<<"MIGRATE");
 $define one
   two
 MIGRATE
-    throws_ok { $migrate->load($file) } qr/no data allowed for \Q$define\E\b/ms;
+    throws_ok { $migrate->load($file) } qr/no data allowed for '\Q$define\E'/msi;
     $file->spew_utf8(<<"MIGRATE");
 $define upgrade
 MIGRATE
-    throws_ok { $migrate->load($file) } qr/can't redefine keyword/ms;
+    throws_ok { $migrate->load($file) } qr/can't redefine keyword/msi;
     $file->spew_utf8(<<"MIGRATE");
 DEFINE2 only_upgrade
 upgrade
 downgrade true
 $define only_upgrade
 MIGRATE
-    throws_ok { $migrate->load($file) } qr/already defined/ms;
+    throws_ok { $migrate->load($file) } qr/already defined/msi;
 }
 
 $file->spew_utf8(<<'MIGRATE');
 DEFINE name
 MIGRATE
-throws_ok { $migrate->load($file) } qr/need operation after DEFINE/ms;
+throws_ok { $migrate->load($file) } qr/need operation after 'DEFINE'/msi;
 
 $file->spew_utf8(<<'MIGRATE');
 DEFINE name
 RESTORE
 MIGRATE
-throws_ok { $migrate->load($file) } qr/first operation after DEFINE must be/ms;
+throws_ok { $migrate->load($file) } qr/first operation after 'DEFINE' must be/msi;
 
 $file->spew_utf8(<<'MIGRATE');
 DEFINE2 name
 MIGRATE
-throws_ok { $migrate->load($file) } qr/need two operations after DEFINE2/ms;
+throws_ok { $migrate->load($file) } qr/need two operations after 'DEFINE2'/msi;
 
 $file->spew_utf8(<<'MIGRATE');
 DEFINE2 name
 RESTORE
 RESTORE
 MIGRATE
-throws_ok { $migrate->load($file) } qr/first operation after DEFINE2 must be/ms;
+throws_ok { $migrate->load($file) } qr/first operation after 'DEFINE2' must be/msi;
 
 $file->spew_utf8(<<'MIGRATE');
 DEFINE2 name
 upgrade
 RESTORE
 MIGRATE
-throws_ok { $migrate->load($file) } qr/second operation after DEFINE2 must be/ms;
+throws_ok { $migrate->load($file) } qr/second operation after 'DEFINE2' must be/msi;
 
 $file->spew_utf8(<<'MIGRATE');
 DEFINE4 name
 MIGRATE
-throws_ok { $migrate->load($file) } qr/need four operations after DEFINE4/ms;
+throws_ok { $migrate->load($file) } qr/need four operations after 'DEFINE4'/msi;
 
 $file->spew_utf8(<<'MIGRATE');
 DEFINE4 name
@@ -218,7 +218,7 @@ RESTORE
 RESTORE
 RESTORE
 MIGRATE
-throws_ok { $migrate->load($file) } qr/first operation after DEFINE4 must be/ms;
+throws_ok { $migrate->load($file) } qr/first operation after 'DEFINE4' must be/msi;
 
 $file->spew_utf8(<<'MIGRATE');
 DEFINE4 name
@@ -227,7 +227,7 @@ RESTORE
 RESTORE
 RESTORE
 MIGRATE
-throws_ok { $migrate->load($file) } qr/second operation after DEFINE4 must be/ms;
+throws_ok { $migrate->load($file) } qr/second operation after 'DEFINE4' must be/msi;
 
 $file->spew_utf8(<<'MIGRATE');
 DEFINE4 name
@@ -236,7 +236,7 @@ upgrade
 RESTORE
 RESTORE
 MIGRATE
-throws_ok { $migrate->load($file) } qr/third operation after DEFINE4 must be/ms;
+throws_ok { $migrate->load($file) } qr/third operation after 'DEFINE4' must be/msi;
 
 $file->spew_utf8(<<'MIGRATE');
 DEFINE4 name
@@ -245,31 +245,31 @@ upgrade
 downgrade
 RESTORE
 MIGRATE
-throws_ok { $migrate->load($file) } qr/fourth operation after DEFINE4 must be/ms;
+throws_ok { $migrate->load($file) } qr/fourth operation after 'DEFINE4' must be/msi;
 
 $file->spew_utf8(<<'MIGRATE');
 VERSION 1
 downgrade true
 MIGRATE
-throws_ok { $migrate->load($file) } qr/need .* before downgrade/ms;
+throws_ok { $migrate->load($file) } qr/need .* before 'downgrade'/msi;
 
 $file->spew_utf8(<<'MIGRATE');
 VERSION 1
 upgrade true
 MIGRATE
-throws_ok { $migrate->load($file) } qr/need .* after upgrade/ms;
+throws_ok { $migrate->load($file) } qr/need .* after 'upgrade'/msi;
 
 $file->spew_utf8(<<'MIGRATE');
 VERSION 1
 before_upgrade true
 upgrade true
 MIGRATE
-throws_ok { $migrate->load($file) } qr/need .* after before_upgrade/ms;
+throws_ok { $migrate->load($file) } qr/need .* after 'before_upgrade'/msi;
 
 $file->spew_utf8(<<'MIGRATE');
 upgrade true
 MIGRATE
-throws_ok { $migrate->load($file) } qr/need VERSION before/ms;
+throws_ok { $migrate->load($file) } qr/need 'VERSION' before/msi;
 
 
 ### old bugs
@@ -293,7 +293,7 @@ VERSION 0
 #bug/macro_name
 VERSION 1
 MIGRATE
-throws_ok { $migrate->load($file) } qr/bad name for DEFINE/ms, 'bug: macro name start with #';
+throws_ok { $migrate->load($file) } qr/bad name for 'DEFINE'/msi, 'bug: macro name start with #';
 
 $file->spew_utf8(<<'MIGRATE');
 DEFINE "#bug/macro_name"
@@ -302,7 +302,7 @@ VERSION 0
 #bug/macro_name
 VERSION 1
 MIGRATE
-throws_ok { $migrate->load($file) } qr/bad name for DEFINE/ms, 'bug: macro name start with #';
+throws_ok { $migrate->load($file) } qr/bad name for 'DEFINE'/msi, 'bug: macro name start with #';
 
 
 done_testing;

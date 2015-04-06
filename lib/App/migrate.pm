@@ -51,12 +51,12 @@ sub find_paths {
 sub get_steps {
     my ($self, $path) = @_;
     my @path = @{ $path // [] };
-    croak 'path must contain at least 2 versions' if 2 > @path;
+    croak 'Path must contain at least 2 versions' if 2 > @path;
     my @all_steps;
     for (; 2 <= @path; shift @path) {
         my ($prev, $next) = @path;
-        croak "unknown version '$prev'" if !$self->{paths}{$prev};
-        croak "no one-step migration from '$prev' to '$next'" if !$self->{paths}{$prev}{$next};
+        croak "Unknown version '$prev'" if !$self->{paths}{$prev};
+        croak "No one-step migration from '$prev' to '$next'" if !$self->{paths}{$prev}{$next};
         push @all_steps, @{ $self->{paths}{$prev}{$next} };
     }
     return @all_steps;
@@ -109,14 +109,14 @@ sub load {
             ($prev_version, $next_version, @steps) = ($next_version, q{});
         }
         elsif (KW_UP->{$op->{op}}) {
-            die _e($op, "need VERSION before $op->{op}") if $prev_version eq q{};
+            die _e($op, "Need 'VERSION' before '$op->{op}'") if $prev_version eq q{};
             my ($cmd1, @args1) = @{ $op->{args} };
             push @steps, {
                 type            => $op->{op},
                 cmd             => $cmd1,
                 args            => \@args1,
             };
-            die _e($op, "need RESTORE|downgrade|after_downgrade after $op->{op}")
+            die _e($op, "Need 'RESTORE' or 'downgrade' or 'after_downgrade' after '$op->{op}'")
                 if !( @op && (KW_DOWN->{$op[0]{op}} || KW_RESTORE->{$op[0]{op}}) );
             my $op2 = shift @op;
             if (KW_RESTORE->{$op2->{op}}) {
@@ -135,7 +135,7 @@ sub load {
             }
         }
         else {
-            die _e($op, "need before_upgrade|upgrade before $op->{op}");
+            die _e($op, "Need 'before_upgrade' or 'upgrade' before '$op->{op}'");
         }
     }
 
@@ -144,7 +144,7 @@ sub load {
 
 sub on {
     my ($self, $e, $code) = @_;
-    croak "unknown event $e" if !$self->{on}{$e};
+    croak "Unknown event $e" if !$self->{on}{$e};
     $self->{on}{$e} = $code;
     return $self;
 }
@@ -187,9 +187,9 @@ sub run {
                     prev_version    => $from,
                     next_version    => $path[-1],
                 });
-                warn "successfully undone interrupted migration by RESTORE $from\n";
+                warn "Successfully undone interrupted migration by RESTORE $from\n";
                 1;
-            } or warn "failed to RESTORE $from: $@";
+            } or warn "Failed to RESTORE $from: $@";
         }
         die $err;
     };
@@ -222,7 +222,7 @@ sub _do {
                 $cmd = _data2arg($cmd);
                 chmod 0700, $cmd or croak "chmod($cmd): $!";    ## no critic (ProhibitMagicNumbers)
             }
-            system($cmd, @{ $step->{args} }) == 0 or die "$step->{type} failed: $cmd @{ $step->{args} }\n";
+            system($cmd, @{ $step->{args} }) == 0 or die "'$step->{type}' failed: $cmd @{ $step->{args} }\n";
             print "\n";
         }
         1;
@@ -249,11 +249,11 @@ sub _find_paths {
 }
 
 sub _on_backup {
-    croak 'you need to define how to make BACKUP';
+    croak 'You need to define how to make BACKUP';
 }
 
 sub _on_restore {
-    croak 'you need to define how to RESTORE from backup';
+    croak 'You need to define how to RESTORE from backup';
 }
 
 sub _on_version {
@@ -269,7 +269,7 @@ When done, use:
    exit 1      to interrupt migration and RESTORE from backup
 
 ERROR
-    system($ENV{SHELL} // '/bin/sh') == 0 or die "migration interrupted\n";
+    system($ENV{SHELL} // '/bin/sh') == 0 or die "Migration interrupted\n";
     return;
 }
 
@@ -280,44 +280,44 @@ sub _preprocess { ## no critic (ProhibitExcessComplexity)
     while (@tokens) {
         my $t = shift @tokens;
         if ($t->{op} =~ /\ADEFINE[24]?\z/ms) {
-            die _e($t, "$t->{op} must have one param", "@{$t->{args}}") if 1 != @{$t->{args}};
-            die _e($t, "bad name for $t->{op}", $t->{args}[0]) if $t->{args}[0] !~ /\A(?!#)\S+\z/ms;
-            die _e($t, "no data allowed for $t->{op}", $t->{data}) if $t->{data} ne q{};
+            die _e($t, "'$t->{op}' must have one param", "@{$t->{args}}") if 1 != @{$t->{args}};
+            die _e($t, "Bad name for '$t->{op}'", $t->{args}[0]) if $t->{args}[0] !~ /\A(?!#)\S+\z/ms;
+            die _e($t, "No data allowed for '$t->{op}'", $t->{data}) if $t->{data} ne q{};
             my $name = $t->{args}[0];
-            die _e($t, "can't redefine keyword '$name'") if KW->{$name};
+            die _e($t, "Can't redefine keyword '$name'") if KW->{$name};
             die _e($t, "'$name' is already defined") if $macro{$name};
             if ($t->{op} eq 'DEFINE') {
-                die _e($t, 'need operation after DEFINE') if @tokens < DEFINE_TOKENS;
+                die _e($t, q{Need operation after 'DEFINE'}) if @tokens < DEFINE_TOKENS;
                 my $t1 = shift @tokens;
-                die _e($t1, 'first operation after DEFINE must be before_upgrade|upgrade|downgrade|after_downgrade', $t1->{op}) if !( KW_UP->{$t1->{op}} || KW_DOWN->{$t1->{op}} );
+                die _e($t1, q{First operation after 'DEFINE' must be 'before_upgrade' or 'upgrade' or 'downgrade' or 'after_downgrade'}, $t1->{op}) if !( KW_UP->{$t1->{op}} || KW_DOWN->{$t1->{op}} );
                 $macro{$name} = [ $t1 ];
             }
             elsif ($t->{op} eq 'DEFINE2') {
-                die _e($t, 'need two operations after DEFINE2') if @tokens < DEFINE2_TOKENS;
+                die _e($t, q{Need two operations after 'DEFINE2'}) if @tokens < DEFINE2_TOKENS;
                 my $t1 = shift @tokens;
                 my $t2 = shift @tokens;
-                die _e($t1,  'first operation after DEFINE2 must be before_upgrade|upgrade',      $t1->{op}) if !KW_UP->{$t1->{op}};
-                die _e($t2, 'second operation after DEFINE2 must be downgrade|after_downgrade',   $t2->{op}) if !KW_DOWN->{$t2->{op}};
+                die _e($t1,  q{First operation after 'DEFINE2' must be 'before_upgrade' or 'upgrade'},      $t1->{op}) if !KW_UP->{$t1->{op}};
+                die _e($t2, q{Second operation after 'DEFINE2' must be 'downgrade' or 'after_downgrade'},   $t2->{op}) if !KW_DOWN->{$t2->{op}};
                 $macro{$name} = [ $t1, $t2 ];
             }
             elsif ($t->{op} eq 'DEFINE4') {
-                die _e($t, 'need four operations after DEFINE4') if @tokens < DEFINE4_TOKENS;
+                die _e($t, q{Need four operations after 'DEFINE4'}) if @tokens < DEFINE4_TOKENS;
                 my $t1 = shift @tokens;
                 my $t2 = shift @tokens;
                 my $t3 = shift @tokens;
                 my $t4 = shift @tokens;
-                die _e($t1,  'first operation after DEFINE4 must be before_upgrade',  $t1->{op}) if $t1->{op} ne 'before_upgrade';
-                die _e($t2, 'second operation after DEFINE4 must be upgrade',         $t2->{op}) if $t2->{op} ne 'upgrade';
-                die _e($t3,  'third operation after DEFINE4 must be downgrade',       $t3->{op}) if $t3->{op} ne 'downgrade';
-                die _e($t4, 'fourth operation after DEFINE4 must be after_downgrade', $t4->{op}) if $t4->{op} ne 'after_downgrade';
+                die _e($t1,  q{First operation after 'DEFINE4' must be 'before_upgrade'},  $t1->{op}) if $t1->{op} ne 'before_upgrade';
+                die _e($t2, q{Second operation after 'DEFINE4' must be 'upgrade'},         $t2->{op}) if $t2->{op} ne 'upgrade';
+                die _e($t3,  q{Third operation after 'DEFINE4' must be 'downgrade'},       $t3->{op}) if $t3->{op} ne 'downgrade';
+                die _e($t4, q{Fourth operation after 'DEFINE4' must be 'after_downgrade'}, $t4->{op}) if $t4->{op} ne 'after_downgrade';
                 $macro{$name} = [ $t1, $t4, $t2, $t3 ];
             }
         }
         elsif (KW_VERSION->{$t->{op}}) {
-            die _e($t, 'VERSION must have one param', "@{$t->{args}}") if 1 != @{$t->{args}};
-            die _e($t, 'bad value for VERSION', $t->{args}[0])
+            die _e($t, q{'VERSION' must have one param}, "@{$t->{args}}") if 1 != @{$t->{args}};
+            die _e($t, q{Bad value for 'VERSION'}, $t->{args}[0])
                 if $t->{args}[0] !~ /\A\S+\z/ms || $t->{args}[0] =~ /[\x00-\x1F\x7F \/?*`"'\\]/ms;
-            die _e($t, 'no data allowed for VERSION', $t->{data}) if $t->{data} ne q{};
+            die _e($t, q{No data allowed for 'VERSION'}, $t->{data}) if $t->{data} ne q{};
             push @op, {
                 loc     => $t->{loc},
                 op      => $t->{op},
@@ -325,8 +325,8 @@ sub _preprocess { ## no critic (ProhibitExcessComplexity)
             };
         }
         elsif (KW_RESTORE->{$t->{op}}) {
-            die _e($t, 'RESTORE must have no params', "@{$t->{args}}") if 0 != @{$t->{args}};
-            die _e($t, 'no data allowed for RESTORE', $t->{data}) if $t->{data} ne q{};
+            die _e($t, q{'RESTORE' must have no params}, "@{$t->{args}}") if 0 != @{$t->{args}};
+            die _e($t, q{No data allowed for 'RESTORE'}, $t->{data}) if $t->{data} ne q{};
             push @op, {
                 loc     => $t->{loc},
                 op      => $t->{op},
@@ -334,7 +334,7 @@ sub _preprocess { ## no critic (ProhibitExcessComplexity)
             };
         }
         elsif (KW_UP->{$t->{op}} || KW_DOWN->{$t->{op}}) {
-            die _e($t, "$t->{op} require command or data") if !@{$t->{args}} && $t->{data} !~ /\S/ms;
+            die _e($t, "'$t->{op}' require command or data") if !@{$t->{args}} && $t->{data} !~ /\S/ms;
             push @op, {
                 loc     => $t->{loc},
                 op      => $t->{op},
@@ -357,7 +357,7 @@ sub _preprocess { ## no critic (ProhibitExcessComplexity)
                   : $t->{data} =~ /\S/ms    ? _shebang($t->{data})
                   :                           ()
                   ;
-                die _e($t, "$t->{op} require command or data") if !@args;
+                die _e($t, "'$t->{op}' require command or data") if !@args;
                 push @op, {
                     loc     => $t->{loc},
                     op      => $_->{op},
@@ -366,7 +366,7 @@ sub _preprocess { ## no critic (ProhibitExcessComplexity)
             }
         }
         else {
-            die _e($t, "unknown operation '$t->{op}'");
+            die _e($t, "Unknown operation '$t->{op}'");
         }
     }
     return @op;
@@ -404,7 +404,7 @@ sub _tokenize {
                 }
                 push @args, $param;
             }
-            die _e({loc=>$loc}, 'bad operation param', $1) if $args =~ /\G(.+)\z/msgc; ## no critic (ProhibitCaptureWithoutTest)
+            die _e({loc=>$loc}, 'Bad operation param', $1) if $args =~ /\G(.+)\z/msgc; ## no critic (ProhibitCaptureWithoutTest)
             push @tokens, {
                 loc => {%{ $loc }},
                 op  => $op,
@@ -417,14 +417,14 @@ sub _tokenize {
                 $tokens[-1]{data} .= $_;
             }
             elsif (/\S/ms) {
-                die _e({loc=>$loc}, 'data before operation', $_);
+                die _e({loc=>$loc}, 'Data before operation', $_);
             }
             else {
                 # skip /^\s*$/ before first token
             }
         }
         else {
-            die _e({loc=>$loc}, 'bad token', $_);
+            die _e({loc=>$loc}, 'Bad token', $_);
         }
     }
     # post-process data

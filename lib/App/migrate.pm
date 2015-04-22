@@ -8,7 +8,7 @@ use Carp;
 
 our $VERSION = 'v0.2.0';
 
-use List::Util qw( first any );
+use List::Util qw( first );
 use File::Temp qw( tempfile ); # don't use Path::Tiny to have temp files in error $SHELL
 
 use constant KW_DEFINE      => { map {$_=>1} qw( DEFINE DEFINE2 DEFINE4     ) };

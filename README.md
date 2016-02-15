@@ -1,5 +1,5 @@
 [![Build Status](https://travis-ci.org/powerman/migrate.svg?branch=master)](https://travis-ci.org/powerman/migrate)
-[![Coverage Status](https://coveralls.io/repos/powerman/migrate/badge.png?branch=master)](https://coveralls.io/r/powerman/migrate?branch=master)
+[![Coverage Status](https://coveralls.io/repos/powerman/migrate/badge.svg?branch=master)](https://coveralls.io/r/powerman/migrate?branch=master)
 
 # NAME
 
@@ -550,11 +550,11 @@ Feel free to fork the repository and submit pull requests.
 
 # AUTHOR
 
-Alex Efros <powerman@cpan.org>
+Alex Efros &lt;powerman@cpan.org>
 
 # COPYRIGHT AND LICENSE
 
-This software is Copyright (c) 2015 by Alex Efros <powerman@cpan.org>.
+This software is Copyright (c) 2015 by Alex Efros &lt;powerman@cpan.org>.
 
 This is free software, licensed under:
 

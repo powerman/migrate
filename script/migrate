@@ -4,7 +4,7 @@ use warnings;
 use strict;
 use utf8;
 
-our $VERSION = 'v0.1.0';
+our $VERSION = 'v0.2.1';
 
 use App::migrate;
 use Getopt::Long qw( GetOptionsFromArray );
@@ -104,7 +104,7 @@ migrate - upgrade / downgrade project
 
 =head1 VERSION
 
-This document describes migrate version v0.1.0
+This document describes migrate version v0.2.1
 
 
 =head1 USAGE

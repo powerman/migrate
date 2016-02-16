@@ -7,7 +7,7 @@ App::migrate - upgrade / downgrade project
 
 # VERSION
 
-This document describes App::migrate version v0.2.1
+This document describes App::migrate version v0.2.2
 
 # SYNOPSIS
 

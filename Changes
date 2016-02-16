@@ -1,6 +1,8 @@
 Revision history for App-migrate
 
 {{$NEXT}}
+
+v0.2.2  2016-02-17 01:36:10 EET
 	- Improve test portability.
 
 v0.2.1  2015-04-23 08:43:24 EEST

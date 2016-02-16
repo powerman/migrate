@@ -6,6 +6,8 @@ use Test::Output qw( :all );
 use Path::Tiny qw( path tempdir tempfile );
 use App::migrate;
 
+my $have_pgrep = grep {-x "$_/pgrep"} split /:/, $ENV{PATH};
+
 
 my $migrate = App::migrate->new;
 my $file    = tempfile('migrate.XXXXXX');
@@ -114,10 +116,17 @@ PATCH
 
     run('0.2.0' => '1.0.0');
     ok -e 'some_daemon', '... ./some_daemon exists';
+
+SKIP: {
+    skip 'pgrep not installed', 1 if !$have_pgrep;
     is system('pgrep -x -f "/bin/sh ./some_daemon" >/dev/null'), 0, '... some_daemon is running';
+}
 
     run('1.0.0' => '0.2.0');
+SKIP: {
+    skip 'pgrep not installed', 1 if !$have_pgrep;
     isnt system('pgrep -x -f "/bin/sh ./some_daemon" >/dev/null'), 0, '... some_daemon is not running';
+}
     ok !-e 'some_daemon', '... ./some_daemon does not exists';
 
     path('0.2.0.patch')->remove;

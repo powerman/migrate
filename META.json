@@ -58,7 +58,7 @@
    "provides" : {
       "App::migrate" : {
          "file" : "lib/App/migrate.pm",
-         "version" : "v0.2.2"
+         "version" : "v0.2.3"
       }
    },
    "release_status" : "stable",
@@ -73,7 +73,7 @@
          "web" : "https://github.com/powerman/migrate"
       }
    },
-   "version" : "v0.2.2",
+   "version" : "v0.2.3",
    "x_contributors" : [
       "Mikko Koivunalho <mikko.koivunalho@iki.fi>"
    ]

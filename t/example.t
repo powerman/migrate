@@ -6,7 +6,7 @@ use Test::Output qw( :all );
 use Path::Tiny qw( path tempdir tempfile );
 use App::migrate;
 
-my $have_pgrep = grep {-x "$_/pgrep"} split /:/, $ENV{PATH};
+plan skip_all => 'pgrep not installed'      if !grep {-x "$_/pgrep"} split /:/, $ENV{PATH};
 
 
 my $migrate = App::migrate->new;
@@ -118,13 +118,13 @@ PATCH
     ok -e 'some_daemon', '... ./some_daemon exists';
 
 SKIP: {
-    skip 'pgrep not installed', 1 if !$have_pgrep;
+    skip 'unstable on CPAN Testers', 1 if !$ENV{RELEASE_TESTING} && ($ENV{AUTOMATED_TESTING} || $ENV{PERL_CPAN_REPORTER_CONFIG});
     is system('pgrep -x -f "/bin/sh ./some_daemon" >/dev/null'), 0, '... some_daemon is running';
 }
 
     run('1.0.0' => '0.2.0');
 SKIP: {
-    skip 'pgrep not installed', 1 if !$have_pgrep;
+    skip 'unstable on CPAN Testers', 1 if !$ENV{RELEASE_TESTING} && ($ENV{AUTOMATED_TESTING} || $ENV{PERL_CPAN_REPORTER_CONFIG});
     isnt system('pgrep -x -f "/bin/sh ./some_daemon" >/dev/null'), 0, '... some_daemon is not running';
 }
     ok !-e 'some_daemon', '... ./some_daemon does not exists';

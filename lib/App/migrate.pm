@@ -533,15 +533,13 @@ backups while migration.
 
 =head1 INTERFACE
 
-=over
-
-=item new
+=head2 new
 
     $migrate = App::migrate->new;
 
 Create and return new App::migrate object.
 
-=item load
+=head2 load
 
     $migrate->load('path/to/migrate');
 
@@ -558,7 +556,7 @@ version values.
 Will throw if given file's contents don't conform to L</"Specification"> -
 this may be used to check file's syntax.
 
-=item find_paths
+=head2 find_paths
 
     @paths = $migrate->find_paths($from_version => $to_version);
 
@@ -606,7 +604,7 @@ this list with two paths (in any order):
         ['1.0.42', '1.2.0', …, '1.2.3', '1.2.4', '1.2.5'],
     )
 
-=item get_steps
+=head2 get_steps
 
     @steps = $migrate->get_steps( \@versions );
 
@@ -635,7 +633,7 @@ Each element in C<@steps> is a HASHREF with these keys:
 
 Will throw if unable to return requested steps.
 
-=item on
+=head2 on
 
     $migrate = $migrate->on(BACKUP  => \&your_handler);
     $migrate = $migrate->on(RESTORE => \&your_handler);
@@ -699,7 +697,7 @@ version-before-migration from backup).
 
 =back
 
-=item run
+=head2 run
 
     $migrate->run( \@versions );
 
@@ -709,8 +707,6 @@ execute them in order. Will also call handlers as described in L</"on">.
 Before executing each step will set C<$ENV{MIGRATE_PREV_VERSION}> to
 current version (which it will migrate from) and
 C<$ENV{MIGRATE_NEXT_VERSION}> to version it is trying to migrate to.
-
-=back
 
 
 =head1 SYNTAX
@@ -853,11 +849,20 @@ you'll have to use line with two spaces instead.
 
 =back
 
-Supported operations:
+While executing any commands two environment variables will be set:
+C<$MIGRATE_PREV_VERSION> and C<$MIGRATE_NEXT_VERSION> (first is always
+version we're migrating from, and second is always version we're migrating
+to - i.e. while downgrading C<$MIGRATE_NEXT_VERSION> will be lower/older
+version than C<$MIGRATE_PREV_VERSION>)
 
-=over
+All executed commands must complete without error, otherwise emergency
+shell will be started and user should either fix the error and C<exit>
+from shell to continue migration, or C<exit 1> from shell to interrupt
+migration and restore previous-before-this-migration version from backup.
 
-=item VERSION
+=head2 Supported operations
+
+=head3 VERSION
 
 Must have exactly one param (version number). Some symbols are not allowed
 in version numbers: special (0x00-0x1F,0x7F), both slash, all three
@@ -873,13 +878,13 @@ Each file must contain 'VERSION' operation before any migrate operations
 
 All operations after last 'VERSION' operation will be ignored.
 
-=item before_upgrade
+=head3 before_upgrade
 
-=item upgrade
+=head3 upgrade
 
-=item downgrade
+=head3 downgrade
 
-=item after_downgrade
+=head3 after_downgrade
 
 These operations must be always used in pairs: first must be one of
 'before_upgrade' or 'upgrade' operation, second must be one of 'downgrade'
@@ -934,7 +939,7 @@ C<#!>), which will be made executable and run without any params.
 
 =back
 
-=item RESTORE
+=head3 RESTORE
 
 Doesn't support any params, neither usual nor multiline.
 
@@ -945,7 +950,7 @@ operations then all 'downgrade' and 'after_downgrade' operations between
 same 'VERSION' operations will be ignored and on downgrading previous
 version will be restored from backup.
 
-=item DEFINE
+=head3 DEFINE
 
 This operation must have only one non-multiline param - name of defined
 macro. This name must not be same as one of existing operation names, both
@@ -983,7 +988,7 @@ params.
 
 =back
 
-=item DEFINE2
+=head3 DEFINE2
 
 Work similar to DEFINE, but require two next operations after it: first
 must be one of 'before_upgrade' or 'upgrade', and second must be one of
@@ -992,7 +997,7 @@ must be one of 'before_upgrade' or 'upgrade', and second must be one of
 Params of both operations will be combined with params of substituted
 operation as explained above.
 
-=item DEFINE4
+=head3 DEFINE4
 
 Work similar to DEFINE, but require four next operations after it: first
 must be 'before_upgrade', second - 'upgrade', third - 'downgrade', fourth
@@ -1000,19 +1005,6 @@ must be 'before_upgrade', second - 'upgrade', third - 'downgrade', fourth
 
 Params of all four operations will be combined with params of substituted
 operation as explained above.
-
-=back
-
-While executing any commands two environment variables will be set:
-C<$MIGRATE_PREV_VERSION> and C<$MIGRATE_NEXT_VERSION> (first is always
-version we're migrating from, and second is always version we're migrating
-to - i.e. while downgrading C<$MIGRATE_NEXT_VERSION> will be lower/older
-version than C<$MIGRATE_PREV_VERSION>)
-
-All executed commands must complete without error, otherwise emergency
-shell will be started and user should either fix the error and C<exit>
-from shell to continue migration, or C<exit 1> from shell to interrupt
-migration and restore previous-before-this-migration version from backup.
 
 
 =head1 SUPPORT
@@ -1067,7 +1059,7 @@ Alex Efros E<lt>powerman@cpan.orgE<gt>
 
 =head1 COPYRIGHT AND LICENSE
 
-This software is Copyright (c) 2015 by Alex Efros E<lt>powerman@cpan.orgE<gt>.
+This software is Copyright (c) 2015- by Alex Efros E<lt>powerman@cpan.orgE<gt>.
 
 This is free software, licensed under:
 

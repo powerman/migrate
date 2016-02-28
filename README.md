@@ -88,176 +88,176 @@ backups while migration.
 
 # INTERFACE
 
-- new
+## new
 
-        $migrate = App::migrate->new;
+    $migrate = App::migrate->new;
 
-    Create and return new App::migrate object.
+Create and return new App::migrate object.
 
-- load
+## load
 
-        $migrate->load('path/to/migrate');
+    $migrate->load('path/to/migrate');
 
-    Load migration commands into `$migrate` object.
+Load migration commands into `$migrate` object.
 
-    You should load at least one file with migration commands before you can
-    use ["find\_paths"](#find_paths), ["get\_steps"](#get_steps) or ["run"](#run).
+You should load at least one file with migration commands before you can
+use ["find\_paths"](#find_paths), ["get\_steps"](#get_steps) or ["run"](#run).
 
-    When loading multiple files, if they contain two adjoining 'VERSION'
-    operations with same version values then migration commands between these
-    two version values will be used from first loaded file containing these
-    version values.
+When loading multiple files, if they contain two adjoining 'VERSION'
+operations with same version values then migration commands between these
+two version values will be used from first loaded file containing these
+version values.
 
-    Will throw if given file's contents don't conform to ["Specification"](#specification) -
-    this may be used to check file's syntax.
+Will throw if given file's contents don't conform to ["Specification"](#specification) -
+this may be used to check file's syntax.
 
-- find\_paths
+## find\_paths
 
-        @paths = $migrate->find_paths($from_version => $to_version);
+    @paths = $migrate->find_paths($from_version => $to_version);
 
-    Find and return all possible paths to migrate between given versions.
+Find and return all possible paths to migrate between given versions.
 
-    If no paths found - return empty list. This may happens because you didn't
-    loaded migrate files which contain required migrations or because there is
-    no way to migrate between these versions (for example, if one of given
-    versions is incorrect).
+If no paths found - return empty list. This may happens because you didn't
+loaded migrate files which contain required migrations or because there is
+no way to migrate between these versions (for example, if one of given
+versions is incorrect).
 
-    Multiple paths can be found, for example, when your project had some
-    branches which was later merged.
+Multiple paths can be found, for example, when your project had some
+branches which was later merged.
 
-    Each found path returned as single ARRAYREF element in returned list.
-    This ARRAYREF contains list of all intermediate versions, one by one,
-    starting from `$from_version` and ending with `$to_version`.
+Each found path returned as single ARRAYREF element in returned list.
+This ARRAYREF contains list of all intermediate versions, one by one,
+starting from `$from_version` and ending with `$to_version`.
 
-    For example, if our project have this version history:
+For example, if our project have this version history:
 
-            1.0.0
-              |
-            1.0.42
-             / \
-        1.1.0   1.2.0
-          |       |
-        1.1.8   1.2.3
-          | \     |
-          |  \----|
-        1.1.9   1.2.4
-          |       |
-        1.1.10  1.2.5
+        1.0.0
+          |
+        1.0.42
+         / \
+    1.1.0   1.2.0
+      |       |
+    1.1.8   1.2.3
+      | \     |
+      |  \----|
+    1.1.9   1.2.4
+      |       |
+    1.1.10  1.2.5
 
-    then you'll probably have these migrate files:
+then you'll probably have these migrate files:
 
-        1.1.10.migrate          1.0.0->…->1.0.42->1.1.0->…->1.1.10
-        1.2.5.migrate           1.0.0->…->1.0.42->1.2.0->…->1.2.3->1.2.4->1.2.5
-        1.1.8-1.2.4.migrate     1.0.0->…->1.0.42->1.1.0->…->1.1.8->1.2.4
+    1.1.10.migrate          1.0.0->…->1.0.42->1.1.0->…->1.1.10
+    1.2.5.migrate           1.0.0->…->1.0.42->1.2.0->…->1.2.3->1.2.4->1.2.5
+    1.1.8-1.2.4.migrate     1.0.0->…->1.0.42->1.1.0->…->1.1.8->1.2.4
 
-    If you ["load"](#load) files `1.2.5.migrate` and `1.1.8-1.2.4.migrate` and
-    then call `find_paths('1.0.42' => '1.2.5')`, then it will return
-    this list with two paths (in any order):
+If you ["load"](#load) files `1.2.5.migrate` and `1.1.8-1.2.4.migrate` and
+then call `find_paths('1.0.42' => '1.2.5')`, then it will return
+this list with two paths (in any order):
 
-        (
-            ['1.0.42', '1.1.0', …, '1.1.8', '1.2.4', '1.2.5'],
-            ['1.0.42', '1.2.0', …, '1.2.3', '1.2.4', '1.2.5'],
-        )
+    (
+        ['1.0.42', '1.1.0', …, '1.1.8', '1.2.4', '1.2.5'],
+        ['1.0.42', '1.2.0', …, '1.2.3', '1.2.4', '1.2.5'],
+    )
 
-- get\_steps
+## get\_steps
 
-        @steps = $migrate->get_steps( \@versions );
+    @steps = $migrate->get_steps( \@versions );
 
-    Return list of all migration operations needed to migrate on path given in
-    `@versions`.
+Return list of all migration operations needed to migrate on path given in
+`@versions`.
 
-    For example, to get steps for first path returned by ["find\_paths"](#find_paths):
+For example, to get steps for first path returned by ["find\_paths"](#find_paths):
 
-        @steps = $migrate->get_steps( $migrate->find_paths($from=>$to) );
+    @steps = $migrate->get_steps( $migrate->find_paths($from=>$to) );
 
-    Steps returned in order they'll be executed while ["run"](#run) for this path.
-    Each element in `@steps` is a HASHREF with these keys:
+Steps returned in order they'll be executed while ["run"](#run) for this path.
+Each element in `@steps` is a HASHREF with these keys:
 
-        type    => one of these values:
-                    'VERSION', 'before_upgrade', 'upgrade',
-                    'downgrade', 'after_downgrade', 'RESTORE'
+    type    => one of these values:
+                'VERSION', 'before_upgrade', 'upgrade',
+                'downgrade', 'after_downgrade', 'RESTORE'
 
-        # these keys exists only if value of type key is one of:
-        #   VERSION, RESTORE
-        version => version number
+    # these keys exists only if value of type key is one of:
+    #   VERSION, RESTORE
+    version => version number
 
-        # these keys exists only if value of type key is one of:
-        #   before_upgrade, upgrade, downgrade, after_downgrade
-        cmd     => command to run
-        args    => ARRAYREF of params for that command
+    # these keys exists only if value of type key is one of:
+    #   before_upgrade, upgrade, downgrade, after_downgrade
+    cmd     => command to run
+    args    => ARRAYREF of params for that command
 
-    Will throw if unable to return requested steps.
+Will throw if unable to return requested steps.
 
-- on
+## on
 
-        $migrate = $migrate->on(BACKUP  => \&your_handler);
-        $migrate = $migrate->on(RESTORE => \&your_handler);
-        $migrate = $migrate->on(VERSION => \&your_handler);
-        $migrate = $migrate->on(error   => \&your_handler);
+    $migrate = $migrate->on(BACKUP  => \&your_handler);
+    $migrate = $migrate->on(RESTORE => \&your_handler);
+    $migrate = $migrate->on(VERSION => \&your_handler);
+    $migrate = $migrate->on(error   => \&your_handler);
 
-    Set handler for given event.
+Set handler for given event.
 
-    All handlers will be called only by ["run"](#run); they will get single
-    parameter - step HASHREF (BACKUP handler will get step in same format as
-    RESTORE), see ["get\_steps"](#get_steps) for details of that HASHREF contents.
-    Also these handlers may use `$ENV{MIGRATE_PREV_VERSION}` and
-    `$ENV{MIGRATE_NEXT_VERSION}` - see ["run"](#run) for more details.
+All handlers will be called only by ["run"](#run); they will get single
+parameter - step HASHREF (BACKUP handler will get step in same format as
+RESTORE), see ["get\_steps"](#get_steps) for details of that HASHREF contents.
+Also these handlers may use `$ENV{MIGRATE_PREV_VERSION}` and
+`$ENV{MIGRATE_NEXT_VERSION}` - see ["run"](#run) for more details.
 
-    - 'BACKUP' event
+- 'BACKUP' event
 
-        Handler will be executed when project backup should be created: before
-        starting any new migration, except next one after RESTORE.
+    Handler will be executed when project backup should be created: before
+    starting any new migration, except next one after RESTORE.
 
-        If handler throws then 'error' handler will be executed.
+    If handler throws then 'error' handler will be executed.
 
-        Default handler will throw (because it doesn't know how to backup your
-        project).
+    Default handler will throw (because it doesn't know how to backup your
+    project).
 
-        NOTE: If you'll use handler which doesn't really create and keep backups
-        for all versions then it will be impossible to do RESTORE operation.
+    NOTE: If you'll use handler which doesn't really create and keep backups
+    for all versions then it will be impossible to do RESTORE operation.
 
-    - 'RESTORE' event
+- 'RESTORE' event
 
-        Handler will be executed when project should be restored from backup: when
-        downgrading between versions which contain RESTORE operation or when
-        migration fails.
+    Handler will be executed when project should be restored from backup: when
+    downgrading between versions which contain RESTORE operation or when
+    migration fails.
 
-        If handler throws then 'error' handler will be executed.
+    If handler throws then 'error' handler will be executed.
 
-        Default handler will throw (because it doesn't know how to restore your
-        project).
+    Default handler will throw (because it doesn't know how to restore your
+    project).
 
-    - 'VERSION' event
+- 'VERSION' event
 
-        Handler will be executed after each successful migration.
+    Handler will be executed after each successful migration.
 
-        If handler throws then 'error' handler will be executed.
+    If handler throws then 'error' handler will be executed.
 
-        Default handler does nothing.
+    Default handler does nothing.
 
-    - 'error' event
+- 'error' event
 
-        Handler will be executed when one of commands executed while migration
-        fails or when BACKUP, RESTORE or VERSION handlers throw.
+    Handler will be executed when one of commands executed while migration
+    fails or when BACKUP, RESTORE or VERSION handlers throw.
 
-        If handler throws then try to restore version-before-migration (without
-        calling error handler again if it throws too).
+    If handler throws then try to restore version-before-migration (without
+    calling error handler again if it throws too).
 
-        Default handler will run $SHELL (to let you manually fix errors) and throw
-        if you $SHELL exit status != 0 (to let you choose what to do next -
-        continue migration if you fixed error or interrupt migration to restore
-        version-before-migration from backup).
+    Default handler will run $SHELL (to let you manually fix errors) and throw
+    if you $SHELL exit status != 0 (to let you choose what to do next -
+    continue migration if you fixed error or interrupt migration to restore
+    version-before-migration from backup).
 
-- run
+## run
 
-        $migrate->run( \@versions );
+    $migrate->run( \@versions );
 
-    Will use ["get\_steps"](#get_steps) to get steps for path given in `@versions` and
-    execute them in order. Will also call handlers as described in ["on"](#on).
+Will use ["get\_steps"](#get_steps) to get steps for path given in `@versions` and
+execute them in order. Will also call handlers as described in ["on"](#on).
 
-    Before executing each step will set `$ENV{MIGRATE_PREV_VERSION}` to
-    current version (which it will migrate from) and
-    `$ENV{MIGRATE_NEXT_VERSION}` to version it is trying to migrate to.
+Before executing each step will set `$ENV{MIGRATE_PREV_VERSION}` to
+current version (which it will migrate from) and
+`$ENV{MIGRATE_NEXT_VERSION}` to version it is trying to migrate to.
 
 # SYNTAX
 
@@ -383,120 +383,6 @@ Each line in migrate file must be one of these:
     If you will need to include empty line at end of multiline param then
     you'll have to use line with two spaces instead.
 
-Supported operations:
-
-- VERSION
-
-    Must have exactly one param (version number). Some symbols are not allowed
-    in version numbers: special (0x00-0x1F,0x7F), both slash, all three
-    quotes, ?, \* and space.
-
-    Multiline param not supported.
-
-    This is delimiter between sequences of migrate operations.
-
-    Each file must contain 'VERSION' operation before any migrate operations
-    (i.e. before first 'VERSION' operation only 'DEFINE', 'DEFINE2' and
-    'DEFINE4' operations are allowed).
-
-    All operations after last 'VERSION' operation will be ignored.
-
-- before\_upgrade
-- upgrade
-- downgrade
-- after\_downgrade
-
-    These operations must be always used in pairs: first must be one of
-    'before\_upgrade' or 'upgrade' operation, second must be one of 'downgrade'
-    or 'after\_downgrade' or 'RESTORE' operations.
-
-    These four operations may have zero or more params and optional multiline
-    param. If they won't have any params at all they'll be processed like they
-    have one (empty) multiline param.
-
-    Their params will be executed as a single shell command at different
-    stages of migration process and in different order:
-
-    - On each migration only commands between two nearest VERSION operations
-    will be processed.
-    - On upgrading (migrate forward from previous VERSION to next VERSION) will
-    be executed all 'before\_upgrade' operations in forward order then all
-    'upgrade' operations in forward order.
-    - On downgrading (migrate backward from next VERSION to previous) will be
-    executed all 'downgrade' operations in backward order, then all
-    'after\_downgrade' operations in backward order.
-
-    Shell command to use will be:
-
-    - If operation has one or more params - first param will become executed
-    command name, other params will become command params.
-
-        If operation also has multiline param then it content will be saved into
-        temporary file and name of that file will be added at end of command's
-        params.
-
-    - Else multiline param will be saved into temporary file (after shebang
-    `#!/path/to/bash -ex` if first line of multiline param doesn't start with
-    `#!`), which will be made executable and run without any params.
-
-- RESTORE
-
-    Doesn't support any params, neither usual nor multiline.
-
-    Can be used only after 'before\_upgrade' or 'upgrade' operations.
-
-    When one or more 'RESTORE' operations are used between some 'VERSION'
-    operations then all 'downgrade' and 'after\_downgrade' operations between
-    same 'VERSION' operations will be ignored and on downgrading previous
-    version will be restored from backup.
-
-- DEFINE
-
-    This operation must have only one non-multiline param - name of defined
-    macro. This name must not be same as one of existing operation names, both
-    documented here or created by one of previous 'DEFINE' or 'DEFINE2' or
-    'DEFINE4' operations.
-
-    Next operation must be one of 'before\_upgrade', 'upgrade', 'downgrade' or
-    'after\_downgrade' - it will be substituted in place of all next operations
-    matching name of this macro.
-
-    When substituting macro it may happens what both this macro definition
-    have some normal params and multiline param, and substituted operation
-    also have some it's own normal params and multiline param. All these
-    params will be combined into single command and it params in this way:
-
-    - If macro definition doesn't have any params - params of substituted
-    operation will be handled as usually for 'upgrade' etc. operations.
-    - If macro definition have some params - they will be handled as usually for
-    'upgrade' etc. operations, so we'll always get some command and optional
-    params for it.
-
-        Next, all normal params of substituted command (if any) will be appended
-        to that command params.
-
-        Next, if substituted command have multiline param then it will be saved to
-        temporary file and name of that file will be appended to that command
-        params.
-
-- DEFINE2
-
-    Work similar to DEFINE, but require two next operations after it: first
-    must be one of 'before\_upgrade' or 'upgrade', and second must be one of
-    'downgrade' or 'after\_downgrade'.
-
-    Params of both operations will be combined with params of substituted
-    operation as explained above.
-
-- DEFINE4
-
-    Work similar to DEFINE, but require four next operations after it: first
-    must be 'before\_upgrade', second - 'upgrade', third - 'downgrade', fourth
-    \- 'after\_downgrade'.
-
-    Params of all four operations will be combined with params of substituted
-    operation as explained above.
-
 While executing any commands two environment variables will be set:
 `$MIGRATE_PREV_VERSION` and `$MIGRATE_NEXT_VERSION` (first is always
 version we're migrating from, and second is always version we're migrating
@@ -507,6 +393,123 @@ All executed commands must complete without error, otherwise emergency
 shell will be started and user should either fix the error and `exit`
 from shell to continue migration, or `exit 1` from shell to interrupt
 migration and restore previous-before-this-migration version from backup.
+
+## Supported operations
+
+### VERSION
+
+Must have exactly one param (version number). Some symbols are not allowed
+in version numbers: special (0x00-0x1F,0x7F), both slash, all three
+quotes, ?, \* and space.
+
+Multiline param not supported.
+
+This is delimiter between sequences of migrate operations.
+
+Each file must contain 'VERSION' operation before any migrate operations
+(i.e. before first 'VERSION' operation only 'DEFINE', 'DEFINE2' and
+'DEFINE4' operations are allowed).
+
+All operations after last 'VERSION' operation will be ignored.
+
+### before\_upgrade
+
+### upgrade
+
+### downgrade
+
+### after\_downgrade
+
+These operations must be always used in pairs: first must be one of
+'before\_upgrade' or 'upgrade' operation, second must be one of 'downgrade'
+or 'after\_downgrade' or 'RESTORE' operations.
+
+These four operations may have zero or more params and optional multiline
+param. If they won't have any params at all they'll be processed like they
+have one (empty) multiline param.
+
+Their params will be executed as a single shell command at different
+stages of migration process and in different order:
+
+- On each migration only commands between two nearest VERSION operations
+will be processed.
+- On upgrading (migrate forward from previous VERSION to next VERSION) will
+be executed all 'before\_upgrade' operations in forward order then all
+'upgrade' operations in forward order.
+- On downgrading (migrate backward from next VERSION to previous) will be
+executed all 'downgrade' operations in backward order, then all
+'after\_downgrade' operations in backward order.
+
+Shell command to use will be:
+
+- If operation has one or more params - first param will become executed
+command name, other params will become command params.
+
+    If operation also has multiline param then it content will be saved into
+    temporary file and name of that file will be added at end of command's
+    params.
+
+- Else multiline param will be saved into temporary file (after shebang
+`#!/path/to/bash -ex` if first line of multiline param doesn't start with
+`#!`), which will be made executable and run without any params.
+
+### RESTORE
+
+Doesn't support any params, neither usual nor multiline.
+
+Can be used only after 'before\_upgrade' or 'upgrade' operations.
+
+When one or more 'RESTORE' operations are used between some 'VERSION'
+operations then all 'downgrade' and 'after\_downgrade' operations between
+same 'VERSION' operations will be ignored and on downgrading previous
+version will be restored from backup.
+
+### DEFINE
+
+This operation must have only one non-multiline param - name of defined
+macro. This name must not be same as one of existing operation names, both
+documented here or created by one of previous 'DEFINE' or 'DEFINE2' or
+'DEFINE4' operations.
+
+Next operation must be one of 'before\_upgrade', 'upgrade', 'downgrade' or
+'after\_downgrade' - it will be substituted in place of all next operations
+matching name of this macro.
+
+When substituting macro it may happens what both this macro definition
+have some normal params and multiline param, and substituted operation
+also have some it's own normal params and multiline param. All these
+params will be combined into single command and it params in this way:
+
+- If macro definition doesn't have any params - params of substituted
+operation will be handled as usually for 'upgrade' etc. operations.
+- If macro definition have some params - they will be handled as usually for
+'upgrade' etc. operations, so we'll always get some command and optional
+params for it.
+
+    Next, all normal params of substituted command (if any) will be appended
+    to that command params.
+
+    Next, if substituted command have multiline param then it will be saved to
+    temporary file and name of that file will be appended to that command
+    params.
+
+### DEFINE2
+
+Work similar to DEFINE, but require two next operations after it: first
+must be one of 'before\_upgrade' or 'upgrade', and second must be one of
+'downgrade' or 'after\_downgrade'.
+
+Params of both operations will be combined with params of substituted
+operation as explained above.
+
+### DEFINE4
+
+Work similar to DEFINE, but require four next operations after it: first
+must be 'before\_upgrade', second - 'upgrade', third - 'downgrade', fourth
+\- 'after\_downgrade'.
+
+Params of all four operations will be combined with params of substituted
+operation as explained above.
 
 # SUPPORT
 
@@ -554,7 +557,7 @@ Alex Efros &lt;powerman@cpan.org>
 
 # COPYRIGHT AND LICENSE
 
-This software is Copyright (c) 2015 by Alex Efros &lt;powerman@cpan.org>.
+This software is Copyright (c) 2015- by Alex Efros &lt;powerman@cpan.org>.
 
 This is free software, licensed under:
 

@@ -13,7 +13,7 @@ on test => sub {
     requires 'Path::Tiny', '0.060';
     requires 'Test::Exception';
     requires 'Test::More', '0.96';
-    requires 'Test::Output';
+    requires 'Test::Output', '1.02';
 };
 
 on develop => sub {

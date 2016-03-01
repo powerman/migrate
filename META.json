@@ -52,7 +52,7 @@
             "Path::Tiny" : "0.060",
             "Test::Exception" : "0",
             "Test::More" : "0.96",
-            "Test::Output" : "0"
+            "Test::Output" : "1.02"
          }
       }
    },

@@ -18,7 +18,7 @@ throws_ok { $migrate->load('/dev/null') } qr/plain file/msi;
 throws_ok { $migrate->load('/dev')      } qr/plain file/msi;
 
 $file->remove;
-throws_ok { $migrate->load($file) } qr/No such file/msi;
+throws_ok { $migrate->load($file) } qr/^open\b/msi;
 
 $file->touch;
 lives_ok  { $migrate->load($file) } 'empty file';

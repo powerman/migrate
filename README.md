@@ -53,7 +53,7 @@ including installed packages, etc. - anything what has versions and need
 complex operations to upgrade/downgrade between these versions.
 For example, to migrate source code you can use VCS like Git or Mercurial,
 but they didn't support empty directories, file permissions (except
-executable), non-plain file types (fifo, UNIX socket, etc.), xattr, ACL,
+executable), non-plain file types (FIFO, UNIX socket, etc.), xattr, ACL,
 configuration files which must differ on each site, and databases. So, if
 you need to migrate anything isn't supported by VCS - you can try this
 module/tool.

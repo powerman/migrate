@@ -20,6 +20,7 @@ chdir $proj or die "chdir($proj): $!";
 my (@backup, @restore);
 $migrate->on(BACKUP  => sub { push @backup,  shift->{version} });
 $migrate->on(RESTORE => sub { push @restore, shift->{version} });
+$migrate->on(error   => sub { diag 'on ERROR was called'      });
 
 ok $migrate, 'new';
 

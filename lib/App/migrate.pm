@@ -442,6 +442,15 @@ __END__
 
 =encoding utf8
 
+=begin markdown
+
+[![Build Status](https://travis-ci.org/powerman/migrate.svg?branch=master)](https://travis-ci.org/powerman/migrate)
+[![Coverage Status](https://coveralls.io/repos/powerman/migrate/badge.svg?branch=master)](https://coveralls.io/r/powerman/migrate?branch=master)
+[![Docker Automated Build](https://img.shields.io/docker/automated/powerman/migrate.svg)](https://github.com/powerman/migrate)
+[![Docker Build Status](https://img.shields.io/docker/build/powerman/migrate.svg)](https://hub.docker.com/r/powerman/migrate/)
+
+=end markdown
+
 =head1 NAME
 
 App::migrate - upgrade / downgrade project
